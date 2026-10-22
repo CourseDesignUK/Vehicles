@@ -75,7 +75,7 @@
 <div class="control-deck" id="control-deck">
   <button class="btn" id="btn-narration">AUDIO: OFF</button>
   <button class="btn btn-accent" id="btn-assemble">ASSEMBLE</button>
-  <div class="slider-wrap"><span class="deck-txt">EXPLODE</span><input id="explode-slider" aria-label="Explode assembly" type="range" min="0" max="100" value="0"><span class="pct" id="pct-label">0%</span></div>
+  <div class="slider-wrap"><span class="deck-txt">EXPLODE</span><input id="explode-slider" aria-label="Explode assembly" type="range" min="0" max="200" value="0"><span class="pct" id="pct-label">0%</span></div>
   <button class="btn" id="btn-explode">EXPLODE</button>
   <button class="btn" id="btn-reset-cam">RESET VIEW</button>
 </div>
@@ -501,7 +501,7 @@ function renderVRControlPanel() {
   ctrlCtx.lineWidth = 3;
   ctrlCtx.stroke();
 
-  const fillWidth = Math.max(15, 560 * targetExplodeRatio);
+  const fillWidth = Math.max(15, 560 * Math.min(targetExplodeRatio / 2, 1));
   ctrlCtx.fillStyle = '#f97316';
   ctrlCtx.beginPath();
   ctrlCtx.roundRect(240, 185, fillWidth, 30, 15);
@@ -513,14 +513,14 @@ function renderVRControlPanel() {
 
   ctrlCtx.fillStyle = '#64748b';
   ctrlCtx.font = '22px sans-serif';
-  ctrlCtx.fillText('Pinch slider to explode / assemble · EXIT leaves VR', 50, 330);
+  ctrlCtx.fillText('0–200% EXPLODE · EXIT leaves VR', 50, 330);
 
   ctrlTex.needsUpdate = true;
 }
 renderVRControlPanel();
 
 function syncVRSliderVisuals(ratio) {
-  vrHandleMesh.position.x = vrSliderTrackMinX + (vrSliderTrackMaxX - vrSliderTrackMinX) * ratio;
+  vrHandleMesh.position.x = vrSliderTrackMinX + (vrSliderTrackMaxX - vrSliderTrackMinX) * THREE.MathUtils.clamp(ratio / 2, 0, 1);
   renderVRControlPanel();
 }
 
@@ -728,7 +728,7 @@ function updateHandGestures(){
       }
 
       const localHandPos = vrControlPanelGroup.worldToLocal(handPos);
-      const ratio = THREE.MathUtils.clamp((localHandPos.x - vrSliderTrackMinX) / (vrSliderTrackMaxX - vrSliderTrackMinX), 0, 1);
+      const ratio = THREE.MathUtils.clamp((localHandPos.x - vrSliderTrackMinX) / (vrSliderTrackMaxX - vrSliderTrackMinX), 0, 1) * 2;
       setExplode(ratio);
     }
   });
@@ -747,7 +747,7 @@ function updateHandGestures(){
       gestureBaseExplode=targetExplodeRatio;
     }else{
       const delta=dist - gestureBaseHandDist;
-      const nextRatio=THREE.MathUtils.clamp(gestureBaseExplode + delta * 3.5, 0, 1);
+      const nextRatio=THREE.MathUtils.clamp(gestureBaseExplode + delta * 3.5, 0, 2);
       setExplode(nextRatio);
     }
   }else{
@@ -782,7 +782,7 @@ function setExplode(value){
   $("pct-label").textContent=Math.round(value*100)+"%";
   syncVRSliderVisuals(value);
 }
-$("btn-assemble").addEventListener("click",()=>setExplode(0));$("btn-explode").addEventListener("click",()=>setExplode(1));
+$("btn-assemble").addEventListener("click",()=>setExplode(0));$("btn-explode").addEventListener("click",()=>setExplode(2));
 $("btn-reset-cam").addEventListener("click",()=>{if(renderer.xr.isPresenting){showError("Reset view after exiting Passthrough. The headset controls the camera.");return;}camera.position.set(0,.1,1.0);controls.target.set(0,0,0);controls.update();});
 
 $("btn-narration").addEventListener("click", () => {
@@ -889,8 +889,7 @@ function animate(){
       }
     }
 
-    // Keep the controls in front of the user's current view as they turn or move.
-    positionVRControlPanelInFront();
+    // Panels are placed once when VR starts and remain fixed in world space.
   }
 
   loadedModules.forEach(model=>{
