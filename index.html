@@ -80,7 +80,7 @@
   <button class="btn" id="btn-reset-cam">RESET VIEW</button>
 </div>
 <div id="webgl-container"></div><canvas id="leader-canvas"></canvas><div id="labels-container"></div>
-<div id="vr-hint">Reach out and pinch, or point and pinch, to grab a component.</div>
+<div id="vr-hint">Pinch or trigger to grab parts. Raise 2 fingers (peace sign) on both hands and move apart to explode.</div>
 <div id="error-panel"><div id="error-title">SYSTEM ALERT</div><div id="error-message"></div></div>
 
 <script type="module">
@@ -431,54 +431,158 @@ hand1.add(hModel1);
 hand2.add(hModel2);
 scene.add(controller1,controller2,hand1,hand2);
 
-function onSelectStart(event){
- const controller=event.target;
- const models=[...loadedModules.values()];
- const controllerPos=new THREE.Vector3().setFromMatrixPosition(controller.matrixWorld);
- 
- let closestObj=null;
- let minDistance=0.25; 
- 
- for(const obj of models){
-   const objCenter=obj.localToWorld(obj.userData.localCenter.clone());
-   const dist=controllerPos.distanceTo(objCenter);
-   if(dist<minDistance){
-     minDistance=dist;
-     closestObj=obj;
-   }
- }
- 
- if(!closestObj){
-   const tempMatrix=new THREE.Matrix4().identity().extractRotation(controller.matrixWorld);
-   raycaster.ray.origin.copy(controllerPos);
-   raycaster.ray.direction.set(0,0,-1).applyMatrix4(tempMatrix);
-   const hits=raycaster.intersectObjects(models,true);
-   if(hits.length>0){
-     let obj=hits[0].object;while(obj.parent&&!models.includes(obj))obj=obj.parent;
-     if(models.includes(obj))closestObj=obj;
-   }
- }
+function getRootModule(obj){
+  const models=[...loadedModules.values()];
+  while(obj && !models.includes(obj)){
+    obj=obj.parent;
+  }
+  return obj;
+}
 
- if(closestObj){
-   controller.attach(closestObj);
-   grabState.set(controller,closestObj);
-   selectModule(closestObj);
- }else{
-   clearSelection();
- }
+function findTargetObject(controller){
+  const models=[...loadedModules.values()];
+  const controllerPos=new THREE.Vector3().setFromMatrixPosition(controller.matrixWorld);
+  let closestObj=null;
+  let minDistance=0.45;
+
+  for(const obj of models){
+    const objCenter=obj.localToWorld(obj.userData.localCenter.clone());
+    const dist=controllerPos.distanceTo(objCenter);
+    if(dist<minDistance){
+      minDistance=dist;
+      closestObj=obj;
+    }
+  }
+
+  if(!closestObj){
+    const tempMatrix=new THREE.Matrix4().identity().extractRotation(controller.matrixWorld);
+    raycaster.ray.origin.copy(controllerPos);
+    raycaster.ray.direction.set(0,0,-1).applyMatrix4(tempMatrix);
+    const hits=raycaster.intersectObjects(models,true);
+    if(hits.length>0){
+      closestObj=getRootModule(hits[0].object);
+    }
+  }
+  return closestObj;
+}
+
+function onSelectStart(event){
+  const controller=event.target;
+  const targetObj=findTargetObject(controller);
+  if(targetObj){
+    controller.attach(targetObj);
+    grabState.set(controller,targetObj);
+    selectModule(targetObj);
+  }else{
+    clearSelection();
+  }
 }
 
 function onSelectEnd(event){
- const controller=event.target;
- const obj=grabState.get(controller);
- if(obj){
-   assemblyGroup.attach(obj);
-   grabState.delete(controller);
- }
+  const controller=event.target;
+  const obj=grabState.get(controller);
+  if(obj){
+    assemblyGroup.attach(obj);
+    grabState.delete(controller);
+  }
 }
 
 controller1.addEventListener("selectstart",onSelectStart);controller1.addEventListener("selectend",onSelectEnd);
 controller2.addEventListener("selectstart",onSelectStart);controller2.addEventListener("selectend",onSelectEnd);
+
+const handPinchStates=new Map();
+const tempVecA=new THREE.Vector3(),tempVecB=new THREE.Vector3(),tempVecC=new THREE.Vector3();
+
+function isFingerExtended(hand,tipJoint,pipJoint,wristJoint){
+  if(!hand.joints[tipJoint]||!hand.joints[pipJoint]||!hand.joints[wristJoint])return false;
+  tempVecA.setFromMatrixPosition(hand.joints[tipJoint].matrixWorld);
+  tempVecB.setFromMatrixPosition(hand.joints[pipJoint].matrixWorld);
+  tempVecC.setFromMatrixPosition(hand.joints[wristJoint].matrixWorld);
+  return tempVecA.distanceTo(tempVecC) > tempVecB.distanceTo(tempVecC) + 0.025;
+}
+
+function isFingerCurled(hand,tipJoint,pipJoint,wristJoint){
+  if(!hand.joints[tipJoint]||!hand.joints[pipJoint]||!hand.joints[wristJoint])return false;
+  tempVecA.setFromMatrixPosition(hand.joints[tipJoint].matrixWorld);
+  tempVecB.setFromMatrixPosition(hand.joints[pipJoint].matrixWorld);
+  tempVecC.setFromMatrixPosition(hand.joints[wristJoint].matrixWorld);
+  return tempVecA.distanceTo(tempVecC) <= tempVecB.distanceTo(tempVecC) + 0.01;
+}
+
+function checkTwoFingerRaised(hand){
+  if(!hand.joints||!hand.joints["wrist"])return false;
+  const indexUp=isFingerExtended(hand,"index-finger-tip","index-finger-pip","wrist");
+  const middleUp=isFingerExtended(hand,"middle-finger-tip","middle-finger-pip","wrist");
+  const ringDown=isFingerCurled(hand,"ring-finger-tip","ring-finger-pip","wrist");
+  const pinkyDown=isFingerCurled(hand,"pinky-finger-tip","pinky-finger-pip","wrist");
+  return indexUp && middleUp && ringDown && pinkyDown;
+}
+
+let gestureActive=false;
+let gestureBaseHandDist=0.3;
+let gestureBaseExplode=0;
+
+function updateHandGestures(){
+  if(!renderer.xr.isPresenting)return;
+
+  [hand1,hand2].forEach(hand=>{
+    if(!hand.joints||!hand.joints["index-finger-tip"]||!hand.joints["thumb-tip"])return;
+    const indexTip=tempVecA.setFromMatrixPosition(hand.joints["index-finger-tip"].matrixWorld);
+    const thumbTip=tempVecB.setFromMatrixPosition(hand.joints["thumb-tip"].matrixWorld);
+    const pinchDist=indexTip.distanceTo(thumbTip);
+    const wasPinched=handPinchStates.get(hand)||false;
+    const isPinched=pinchDist<0.025;
+
+    if(!wasPinched && isPinched){
+      handPinchStates.set(hand,true);
+      const pinchPoint=indexTip.clone().add(thumbTip).multiplyScalar(0.5);
+      const models=[...loadedModules.values()];
+      let closestObj=null;
+      let minDistance=0.35;
+      for(const obj of models){
+        const center=obj.localToWorld(obj.userData.localCenter.clone());
+        const d=pinchPoint.distanceTo(center);
+        if(d<minDistance){
+          minDistance=d;
+          closestObj=obj;
+        }
+      }
+      if(closestObj){
+        hand.attach(closestObj);
+        grabState.set(hand,closestObj);
+        selectModule(closestObj);
+      }
+    }else if(wasPinched && !isPinched){
+      handPinchStates.set(hand,false);
+      const obj=grabState.get(hand);
+      if(obj){
+        assemblyGroup.attach(obj);
+        grabState.delete(hand);
+      }
+    }
+  });
+
+  const h1Active=checkTwoFingerRaised(hand1);
+  const h2Active=checkTwoFingerRaised(hand2);
+
+  if(h1Active && h2Active && hand1.joints["wrist"] && hand2.joints["wrist"]){
+    const w1=tempVecA.setFromMatrixPosition(hand1.joints["wrist"].matrixWorld);
+    const w2=tempVecB.setFromMatrixPosition(hand2.joints["wrist"].matrixWorld);
+    const dist=w1.distanceTo(w2);
+
+    if(!gestureActive){
+      gestureActive=true;
+      gestureBaseHandDist=dist;
+      gestureBaseExplode=targetExplodeRatio;
+    }else{
+      const delta=dist - gestureBaseHandDist;
+      const nextRatio=THREE.MathUtils.clamp(gestureBaseExplode + delta * 3.5, 0, 1);
+      setExplode(nextRatio);
+    }
+  }else{
+    gestureActive=false;
+  }
+}
 
 function updateDesktopLabels(){
  if(renderer.xr.isPresenting){labelsContainer.style.display="none";ctx.clearRect(0,0,leaderCanvas.width,leaderCanvas.height);return;}
@@ -586,6 +690,8 @@ renderer.xr.addEventListener("sessionend",()=>{
 
 function animate(){
  currentExplodeRatio+=(targetExplodeRatio-currentExplodeRatio)*.08;
+ 
+ updateHandGestures();
  
  loadedModules.forEach(model=>{
    let isGrabbed=false;
