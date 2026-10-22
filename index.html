@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,7 +23,7 @@
 .hud-panel{position:fixed;top:70px;left:20px;width:270px;padding:14px 16px;font:11px var(--mono)}
 .hud-title{color:var(--accent);font-size:10px;font-weight:800;letter-spacing:1.4px;margin-bottom:10px}
 .status-row{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #ffffff0d}.status-row:last-child{border:0}.status-name{color:var(--muted)}.status-prog{color:var(--accent);font-weight:700}.status-ok{color:var(--green);font-weight:700}.status-err{color:var(--red);font-weight:700}
-.control-deck{display:none;position:fixed;bottom:22px;left:50%;transform:translateX(-50%);align-items:center;gap:12px;padding:10px 14px;max-width:calc(100vw - 24px)}
+.control-deck{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:10px 14px;max-width:calc(100vw - 24px)}
 .btn{border:1px solid var(--border);background:#1e293bcc;color:#e2e8f0;padding:9px 12px;border-radius:4px;cursor:pointer;font:700 10px var(--mono);letter-spacing:.4px;white-space:nowrap}.btn:hover{border-color:var(--accent)}.btn-accent{background:var(--accent);color:#111;border-color:var(--accent)}
 .slider-wrap{display:flex;align-items:center;gap:9px}.deck-txt,.pct{font:700 10px var(--mono);white-space:nowrap}.deck-txt{color:var(--muted)}.pct{color:var(--accent);min-width:34px}input[type=range]{width:160px;accent-color:var(--accent)}
 .annotation-badge{position:absolute;transform:translateY(-50%);pointer-events:auto;padding:8px 10px;background:#0f172aeb;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:4px;color:white;font:11px var(--mono);white-space:nowrap;cursor:pointer;box-shadow:0 4px 15px #0006}.annotation-badge.active{box-shadow:0 0 14px var(--glow);border-color:var(--accent)}.badge-title{font-weight:700}.badge-title span{color:var(--accent);margin-right:6px}.badge-meta{color:var(--muted);font-size:9px;margin-top:4px}
@@ -418,7 +417,6 @@ hand2.add(hModel2);
 scene.add(controller1,controller2,hand1,hand2);
 
 const vrControlPanelGroup = new THREE.Group();
-vrControlPanelGroup.visible = false;
 xrStage.add(vrControlPanelGroup);
 
 const ctrlCanvas = document.createElement('canvas');
@@ -843,7 +841,6 @@ renderer.xr.addEventListener("sessionstart",()=>{
  grid.visible=false;setStatus("vr","PRESENTING","status-ok");
 
  positionVRControlPanelInFront();
- vrControlPanelGroup.visible = true;
  syncVRSliderVisuals(targetExplodeRatio);
 });
 
@@ -899,11 +896,9 @@ function animate(){
 
 renderer.setAnimationLoop(animate);
 window.addEventListener("resize",()=>{
-  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);
+ camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);
 });
 Object.keys(MODULE_METADATA).forEach(loadModel);
 </script>
 </body>
 </html>
-
-```
