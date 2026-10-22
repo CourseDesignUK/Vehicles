@@ -203,7 +203,7 @@ panelTex.colorSpace = THREE.SRGBColorSpace;
 const panelMat = new THREE.MeshBasicMaterial({ map: panelTex, transparent: true, opacity: 0.95, side: THREE.DoubleSide });
 const panelGeo = new THREE.PlaneGeometry(0.7, 0.35);
 const vrInfoPanel = new THREE.Mesh(panelGeo, panelMat);
-vrInfoPanel.position.set(0, 1.65, -0.75);
+vrInfoPanel.position.set(0, 1.27, -0.50);
 vrInfoPanel.visible = false;
 xrStage.add(vrInfoPanel);
 
@@ -532,8 +532,8 @@ function positionVRControlPanelInFront() {
   if (cameraDir.lengthSq() < 0.001) cameraDir.set(0, 0, -1);
   cameraDir.normalize();
 
-  const panelPos = cameraWorldPos.clone().addScaledVector(cameraDir, 0.65);
-  panelPos.y = 1.02;
+  const panelPos = cameraWorldPos.clone().addScaledVector(cameraDir, 0.50);
+  panelPos.y = 0.95;
 
   vrControlPanelGroup.position.copy(panelPos);
   vrControlPanelGroup.lookAt(
@@ -630,7 +630,7 @@ const handPinchStates=new Map();
 const tempVecA=new THREE.Vector3(),tempVecB=new THREE.Vector3(),tempVecC=new THREE.Vector3();
 
 function isFingerExtended(hand,tipJoint,pipJoint,wristJoint){
-  if(!hand.joints[tipJoint]||!hand.joints[pipJoint]||!hand.joints[wristJoint])return false;
+  if(!hand.joints||!hand.joints[tipJoint]||!hand.joints[pipJoint]||!hand.joints[wristJoint])return false;
   tempVecA.setFromMatrixPosition(hand.joints[tipJoint].matrixWorld);
   tempVecB.setFromMatrixPosition(hand.joints[pipJoint].matrixWorld);
   tempVecC.setFromMatrixPosition(hand.joints[wristJoint].matrixWorld);
@@ -638,7 +638,7 @@ function isFingerExtended(hand,tipJoint,pipJoint,wristJoint){
 }
 
 function isFingerCurled(hand,tipJoint,pipJoint,wristJoint){
-  if(!hand.joints[tipJoint]||!hand.joints[pipJoint]||!hand.joints[wristJoint])return false;
+  if(!hand.joints||!hand.joints[tipJoint]||!hand.joints[pipJoint]||!hand.joints[wristJoint])return false;
   tempVecA.setFromMatrixPosition(hand.joints[tipJoint].matrixWorld);
   tempVecB.setFromMatrixPosition(hand.joints[pipJoint].matrixWorld);
   tempVecC.setFromMatrixPosition(hand.joints[wristJoint].matrixWorld);
