@@ -1,4 +1,4 @@
-# ARFF Vehicle Explorer — Entoli XR
+# ARFF Vehicle Explorer
 
 Single-file WebGL / WebXR diagnostic application for inspecting and interacting with modular Aircraft Rescue and Firefighting (ARFF) vehicle assemblies in standard desktop browsers and Meta Quest Passthrough (Mixed Reality).
 
