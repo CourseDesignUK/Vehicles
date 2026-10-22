@@ -80,7 +80,7 @@
   <button class="btn" id="btn-reset-cam">RESET VIEW</button>
 </div>
 <div id="webgl-container"></div><canvas id="leader-canvas"></canvas><div id="labels-container"></div>
-<div id="vr-hint">Pinch or trigger to grab parts. Raise 2 fingers (peace sign) on both hands and move apart to explode.</div>
+<div id="vr-hint">Pinch or trigger to grab parts. Use the floating control panel to explode or close.</div>
 <div id="error-panel"><div id="error-title">SYSTEM ALERT</div><div id="error-message"></div></div>
 
 <script type="module">
@@ -431,6 +431,112 @@ hand1.add(hModel1);
 hand2.add(hModel2);
 scene.add(controller1,controller2,hand1,hand2);
 
+const vrControlPanelGroup = new THREE.Group();
+xrStage.add(vrControlPanelGroup);
+
+const ctrlCanvas = document.createElement('canvas');
+ctrlCanvas.width = 1024;
+ctrlCanvas.height = 400;
+const ctrlCtx = ctrlCanvas.getContext('2d');
+const ctrlTex = new THREE.CanvasTexture(ctrlCanvas);
+ctrlTex.colorSpace = THREE.SRGBColorSpace;
+const ctrlMat = new THREE.MeshBasicMaterial({ map: ctrlTex, transparent: true, opacity: 0.96, side: THREE.DoubleSide });
+const ctrlMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.215), ctrlMat);
+vrControlPanelGroup.add(ctrlMesh);
+
+const vrSliderTrackMinX = -0.19;
+const vrSliderTrackMaxX = 0.11;
+const vrSliderY = -0.01;
+
+const vrHandleMesh = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.018, 0.018, 0.018, 24),
+  new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.3, metalness: 0.2, emissive: 0xf97316, emissiveIntensity: 0.3 })
+);
+vrHandleMesh.rotation.x = Math.PI / 2;
+vrHandleMesh.position.set(vrSliderTrackMinX, vrSliderY, 0.015);
+vrControlPanelGroup.add(vrHandleMesh);
+
+const vrCloseBtnMesh = new THREE.Mesh(
+  new THREE.BoxGeometry(0.065, 0.045, 0.02),
+  new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 })
+);
+vrCloseBtnMesh.position.set(0.20, 0.065, 0.01);
+vrControlPanelGroup.add(vrCloseBtnMesh);
+
+function renderVRControlPanel() {
+  ctrlCtx.clearRect(0, 0, 1024, 400);
+
+  ctrlCtx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+  ctrlCtx.beginPath();
+  ctrlCtx.roundRect(0, 0, 1024, 400, 28);
+  ctrlCtx.fill();
+  ctrlCtx.strokeStyle = '#334155';
+  ctrlCtx.lineWidth = 4;
+  ctrlCtx.stroke();
+
+  ctrlCtx.fillStyle = '#f97316';
+  ctrlCtx.font = 'bold 34px monospace';
+  ctrlCtx.fillText('ASSEMBLY CONTROL', 50, 75);
+
+  ctrlCtx.fillStyle = '#ef4444';
+  ctrlCtx.beginPath();
+  ctrlCtx.roundRect(870, 35, 105, 60, 10);
+  ctrlCtx.fill();
+  ctrlCtx.fillStyle = '#ffffff';
+  ctrlCtx.font = 'bold 32px monospace';
+  ctrlCtx.fillText('X', 912, 77);
+
+  ctrlCtx.fillStyle = '#94a3b8';
+  ctrlCtx.font = 'bold 28px monospace';
+  ctrlCtx.fillText('EXPLODE', 50, 205);
+
+  ctrlCtx.fillStyle = '#1e293b';
+  ctrlCtx.beginPath();
+  ctrlCtx.roundRect(240, 185, 560, 30, 15);
+  ctrlCtx.fill();
+  ctrlCtx.strokeStyle = '#475569';
+  ctrlCtx.lineWidth = 3;
+  ctrlCtx.stroke();
+
+  const fillWidth = Math.max(15, 560 * targetExplodeRatio);
+  ctrlCtx.fillStyle = '#f97316';
+  ctrlCtx.beginPath();
+  ctrlCtx.roundRect(240, 185, fillWidth, 30, 15);
+  ctrlCtx.fill();
+
+  ctrlCtx.fillStyle = '#f97316';
+  ctrlCtx.font = 'bold 36px monospace';
+  ctrlCtx.fillText(`${Math.round(targetExplodeRatio * 100)}%`, 830, 210);
+
+  ctrlCtx.fillStyle = '#64748b';
+  ctrlCtx.font = '22px sans-serif';
+  ctrlCtx.fillText('Pinch slider handle to adjust explosion · Pinch [X] to dismiss', 50, 330);
+
+  ctrlTex.needsUpdate = true;
+}
+renderVRControlPanel();
+
+function syncVRSliderVisuals(ratio) {
+  vrHandleMesh.position.x = vrSliderTrackMinX + (vrSliderTrackMaxX - vrSliderTrackMinX) * ratio;
+  renderVRControlPanel();
+}
+
+function positionVRControlPanelInFront() {
+  const cameraDir = new THREE.Vector3();
+  camera.getWorldDirection(cameraDir);
+  cameraDir.y = 0;
+  if(cameraDir.lengthSq() < 0.001) cameraDir.set(0, 0, -1);
+  cameraDir.normalize();
+
+  const panelPos = camera.position.clone().addScaledVector(cameraDir, 0.65);
+  panelPos.y = camera.position.y - 0.18;
+  vrControlPanelGroup.position.copy(panelPos);
+
+  const lookTarget = new THREE.Vector3(camera.position.x, panelPos.y + 0.05, camera.position.z);
+  vrControlPanelGroup.lookAt(lookTarget);
+  vrControlPanelGroup.visible = true;
+}
+
 function getRootModule(obj){
   const models=[...loadedModules.values()];
   while(obj && !models.includes(obj)){
@@ -468,10 +574,26 @@ function findTargetObject(controller){
 
 function onSelectStart(event){
   const controller=event.target;
+  const controllerPos=new THREE.Vector3().setFromMatrixPosition(controller.matrixWorld);
+
+  if(vrControlPanelGroup.visible){
+    const closeBtnPos=new THREE.Vector3().setFromMatrixPosition(vrCloseBtnMesh.matrixWorld);
+    if(controllerPos.distanceTo(closeBtnPos) < 0.075){
+      vrControlPanelGroup.visible = false;
+      return;
+    }
+
+    const handlePos=new THREE.Vector3().setFromMatrixPosition(vrHandleMesh.matrixWorld);
+    if(controllerPos.distanceTo(handlePos) < 0.075){
+      grabState.set(controller, { type: "vr-slider" });
+      return;
+    }
+  }
+
   const targetObj=findTargetObject(controller);
   if(targetObj){
     controller.attach(targetObj);
-    grabState.set(controller,targetObj);
+    grabState.set(controller, targetObj);
     selectModule(targetObj);
   }else{
     clearSelection();
@@ -482,7 +604,9 @@ function onSelectEnd(event){
   const controller=event.target;
   const obj=grabState.get(controller);
   if(obj){
-    assemblyGroup.attach(obj);
+    if(obj.type !== "vr-slider"){
+      assemblyGroup.attach(obj);
+    }
     grabState.delete(controller);
   }
 }
@@ -532,10 +656,25 @@ function updateHandGestures(){
     const pinchDist=indexTip.distanceTo(thumbTip);
     const wasPinched=handPinchStates.get(hand)||false;
     const isPinched=pinchDist<0.025;
+    const pinchPoint=indexTip.clone().add(thumbTip).multiplyScalar(0.5);
 
     if(!wasPinched && isPinched){
       handPinchStates.set(hand,true);
-      const pinchPoint=indexTip.clone().add(thumbTip).multiplyScalar(0.5);
+
+      if(vrControlPanelGroup.visible){
+        const closeBtnPos=new THREE.Vector3().setFromMatrixPosition(vrCloseBtnMesh.matrixWorld);
+        if(pinchPoint.distanceTo(closeBtnPos) < 0.06){
+          vrControlPanelGroup.visible = false;
+          return;
+        }
+
+        const handlePos=new THREE.Vector3().setFromMatrixPosition(vrHandleMesh.matrixWorld);
+        if(pinchPoint.distanceTo(handlePos) < 0.065){
+          grabState.set(hand, { type: "vr-slider" });
+          return;
+        }
+      }
+
       const models=[...loadedModules.values()];
       let closestObj=null;
       let minDistance=0.35;
@@ -554,11 +693,30 @@ function updateHandGestures(){
       }
     }else if(wasPinched && !isPinched){
       handPinchStates.set(hand,false);
-      const obj=grabState.get(hand);
-      if(obj){
-        assemblyGroup.attach(obj);
+      const item=grabState.get(hand);
+      if(item){
+        if(item.type !== "vr-slider"){
+          assemblyGroup.attach(item);
+        }
         grabState.delete(hand);
       }
+    }
+  });
+
+  grabState.forEach((item, source)=>{
+    if(item && item.type === "vr-slider" && vrControlPanelGroup.visible){
+      let handPos = new THREE.Vector3();
+      if(source.joints && source.joints["index-finger-tip"] && source.joints["thumb-tip"]){
+        const iTip = tempVecA.setFromMatrixPosition(source.joints["index-finger-tip"].matrixWorld);
+        const tTip = tempVecB.setFromMatrixPosition(source.joints["thumb-tip"].matrixWorld);
+        handPos.addVectors(iTip, tTip).multiplyScalar(0.5);
+      } else {
+        handPos.setFromMatrixPosition(source.matrixWorld);
+      }
+
+      const localHandPos = vrControlPanelGroup.worldToLocal(handPos);
+      const ratio = THREE.MathUtils.clamp((localHandPos.x - vrSliderTrackMinX) / (vrSliderTrackMaxX - vrSliderTrackMinX), 0, 1);
+      setExplode(ratio);
     }
   });
 
@@ -604,8 +762,13 @@ function updateDesktopLabels(){
  });
 }
 
-$("explode-slider").addEventListener("input",e=>{targetExplodeRatio=Number(e.target.value)/100;$("pct-label").textContent=e.target.value+"%";});
-function setExplode(value){targetExplodeRatio=value;$("explode-slider").value=Math.round(value*100);$("pct-label").textContent=Math.round(value*100)+"%";}
+$("explode-slider").addEventListener("input",e=>{setExplode(Number(e.target.value)/100);});
+function setExplode(value){
+  targetExplodeRatio=value;
+  $("explode-slider").value=Math.round(value*100);
+  $("pct-label").textContent=Math.round(value*100)+"%";
+  syncVRSliderVisuals(value);
+}
 $("btn-assemble").addEventListener("click",()=>setExplode(0));$("btn-explode").addEventListener("click",()=>setExplode(1));
 $("btn-reset-cam").addEventListener("click",()=>{if(renderer.xr.isPresenting){showError("Reset view after exiting Passthrough. The headset controls the camera.");return;}camera.position.set(0,.1,1.0);controls.target.set(0,0,0);controls.update();});
 
@@ -672,6 +835,9 @@ renderer.xr.addEventListener("sessionstart",()=>{
  }
  
  grid.visible=false;setStatus("vr","PRESENTING","status-ok");
+
+ positionVRControlPanelInFront();
+ syncVRSliderVisuals(targetExplodeRatio);
 });
 
 renderer.xr.addEventListener("sessionend",()=>{
@@ -685,6 +851,7 @@ renderer.xr.addEventListener("sessionend",()=>{
  
  grid.visible=true;camera.position.set(0,.1,1.0);controls.target.set(0,0,0);controls.update();
  vrInfoPanel.visible=false;
+ vrControlPanelGroup.visible=false;
  setStatus("vr","READY");
 });
 
