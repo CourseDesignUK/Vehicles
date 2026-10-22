@@ -417,6 +417,7 @@ hand2.add(hModel2);
 scene.add(controller1,controller2,hand1,hand2);
 
 const vrControlPanelGroup = new THREE.Group();
+vrControlPanelGroup.visible = false;
 xrStage.add(vrControlPanelGroup);
 
 const ctrlCanvas = document.createElement('canvas');
@@ -821,6 +822,7 @@ $("btn-vr").addEventListener("click",async()=>{
 renderer.xr.addEventListener("sessionstart",()=>{
  scene.background=null;scene.fog=null;renderer.setClearColor(0x000000,0);
  xrStage.position.set(0,0,0);xrStage.rotation.set(0,0,0);
+ $("control-deck").style.display="none";
  
  assemblyGroup.scale.copy(desktopAssemblyScale).multiplyScalar(1.5);
  assemblyGroup.position.set(0, 0, -0.85);
@@ -841,12 +843,14 @@ renderer.xr.addEventListener("sessionstart",()=>{
  grid.visible=false;setStatus("vr","PRESENTING","status-ok");
 
  positionVRControlPanelInFront();
+ vrControlPanelGroup.visible = true;
  syncVRSliderVisuals(targetExplodeRatio);
 });
 
 renderer.xr.addEventListener("sessionend",()=>{
  scene.background=null;scene.fog=new THREE.FogExp2(0x0f172a,.025);renderer.setClearColor(0x000000,0);
  xrStage.position.set(0,0,0);xrStage.rotation.set(0,0,0);
+ $("control-deck").style.display="flex";
  
  if(modelsNormalized){
     assemblyGroup.scale.copy(desktopAssemblyScale);
@@ -896,7 +900,7 @@ function animate(){
 
 renderer.setAnimationLoop(animate);
 window.addEventListener("resize",()=>{
- camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);
+  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);
 });
 Object.keys(MODULE_METADATA).forEach(loadModel);
 </script>
