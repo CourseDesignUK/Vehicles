@@ -537,7 +537,7 @@ function positionVRControlPanelInFront() {
 
   // Place the control panel 30 cm in front of the user, around chest height.
   // The headset is usually near eye height, so offset down by 35 cm.
-  const panelPos = cameraWorldPos.clone().addScaledVector(cameraDir, 0.30);
+  const panelPos = cameraWorldPos.clone().addScaledVector(cameraDir, 0.80);
   panelPos.y = Math.max(0.9, cameraWorldPos.y - 0.35);
 
   vrControlPanelGroup.position.copy(panelPos);
