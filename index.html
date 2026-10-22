@@ -485,9 +485,8 @@ function renderVRControlPanel() {
   ctrlCtx.roundRect(870, 35, 105, 60, 10);
   ctrlCtx.fill();
   ctrlCtx.fillStyle = '#ffffff';
-  ctrlCtx.font = 'bold 32px monospace';
   ctrlCtx.font = 'bold 25px monospace';
-   ctrlCtx.fillText('EXIT', 892, 75);
+  ctrlCtx.fillText('EXIT', 892, 75);
 
   ctrlCtx.fillStyle = '#94a3b8';
   ctrlCtx.font = 'bold 28px monospace';
@@ -525,7 +524,6 @@ function syncVRSliderVisuals(ratio) {
 }
 
 function positionVRControlPanelInFront() {
-  // Keep the control and information panels at a comfortable, head-relative distance.
   const cameraWorldPos = new THREE.Vector3();
   const cameraDir = new THREE.Vector3();
   camera.getWorldPosition(cameraWorldPos);
@@ -534,19 +532,20 @@ function positionVRControlPanelInFront() {
   if (cameraDir.lengthSq() < 0.001) cameraDir.set(0, 0, -1);
   cameraDir.normalize();
 
-  const panelPos = cameraWorldPos.clone().addScaledVector(cameraDir, 0.72);
-  panelPos.y = cameraWorldPos.y - 0.20;
+  const panelPos = cameraWorldPos.clone().addScaledVector(cameraDir, 0.65);
+  panelPos.y = 1.02;
+
   vrControlPanelGroup.position.copy(panelPos);
   vrControlPanelGroup.lookAt(
     cameraWorldPos.x,
-    panelPos.y + 0.03,
+    cameraWorldPos.y,
     cameraWorldPos.z
   );
 
-  // Information card sits just above the slider panel, facing the same direction.
   vrInfoPanel.position.copy(panelPos);
-  vrInfoPanel.position.y += 0.31;
+  vrInfoPanel.position.y += 0.32;
   vrInfoPanel.quaternion.copy(vrControlPanelGroup.quaternion);
+
   vrControlPanelGroup.visible = true;
 }
 
@@ -875,10 +874,8 @@ function animate(){
   updateHandGestures();
 
   if (renderer.xr.isPresenting) {
-    // Slow, continuous turntable rotation while in the immersive experience.
     assemblyGroup.rotation.y += delta * 0.12;
 
-    // Cycle the highlighted component and its technical information every five seconds.
     vrCycleElapsed += delta;
     if (vrCycleElapsed >= 5) {
       vrCycleElapsed = 0;
@@ -888,8 +885,6 @@ function animate(){
         if (nextModel) selectModule(nextModel);
       }
     }
-
-    // Panels are placed once when VR starts and remain fixed in world space.
   }
 
   loadedModules.forEach(model=>{
