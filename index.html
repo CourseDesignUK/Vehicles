@@ -592,7 +592,7 @@ function animate(){
    grabState.forEach(v=>{if(v===model)isGrabbed=true;});
    
    if(!isGrabbed){
-     const targetPos=model.userData.initialPosition.clone().addScaledVector(model.userData.vector,currentExplodeRatio);
+     const targetPos=model.userData.initialPosition.clone().addScaledVector(model.userData.vector,currentExplodeRatio * 3.0);
      model.position.lerp(targetPos,0.15);
      model.quaternion.slerp(model.userData.initialQuaternion,0.15);
    }
