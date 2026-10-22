@@ -526,25 +526,34 @@ function syncVRSliderVisuals(ratio) {
 function positionVRControlPanelInFront() {
   const cameraWorldPos = new THREE.Vector3();
   const cameraDir = new THREE.Vector3();
+
   camera.getWorldPosition(cameraWorldPos);
   camera.getWorldDirection(cameraDir);
+
+  // Keep the panels level/upright: only use the user's horizontal viewing direction.
   cameraDir.y = 0;
   if (cameraDir.lengthSq() < 0.001) cameraDir.set(0, 0, -1);
   cameraDir.normalize();
 
-  const panelPos = cameraWorldPos.clone().addScaledVector(cameraDir, 0.50);
-  panelPos.y = 0.95;
+  // Place the control panel 30 cm in front of the user, around chest height.
+  // The headset is usually near eye height, so offset down by 35 cm.
+  const panelPos = cameraWorldPos.clone().addScaledVector(cameraDir, 0.30);
+  panelPos.y = Math.max(0.9, cameraWorldPos.y - 0.35);
 
   vrControlPanelGroup.position.copy(panelPos);
-  vrControlPanelGroup.lookAt(
-    cameraWorldPos.x,
-    cameraWorldPos.y,
-    cameraWorldPos.z
+
+  // A PlaneGeometry is vertical by default. Apply yaw only so it stays
+  // exactly 90 degrees to the floor instead of tilting toward the headset.
+  vrControlPanelGroup.rotation.set(
+    0,
+    Math.atan2(-cameraDir.x, -cameraDir.z),
+    0
   );
 
+  // Keep the information panel upright and just above the control panel.
   vrInfoPanel.position.copy(panelPos);
-  vrInfoPanel.position.y += 0.32;
-  vrInfoPanel.quaternion.copy(vrControlPanelGroup.quaternion);
+  vrInfoPanel.position.y += 0.24;
+  vrInfoPanel.rotation.copy(vrControlPanelGroup.rotation);
 
   vrControlPanelGroup.visible = true;
 }
