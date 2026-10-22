@@ -203,8 +203,7 @@ panelTex.colorSpace = THREE.SRGBColorSpace;
 const panelMat = new THREE.MeshBasicMaterial({ map: panelTex, transparent: true, opacity: 0.95, side: THREE.DoubleSide });
 const panelGeo = new THREE.PlaneGeometry(0.7, 0.35);
 const vrInfoPanel = new THREE.Mesh(panelGeo, panelMat);
-vrInfoPanel.position.set(0.65, 1.45, -0.65);
-vrInfoPanel.rotation.y = -Math.PI / 6; 
+vrInfoPanel.position.set(0, 1.65, -0.75);
 vrInfoPanel.visible = false;
 xrStage.add(vrInfoPanel);
 
@@ -251,6 +250,9 @@ function updateVRPanel(title, pno, desc) {
 
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.06;controls.minDistance=.2;controls.maxDistance=12;controls.target.set(0,0,0);
 const loadedModules=new Map();let currentExplodeRatio=0,targetExplodeRatio=0,activeModuleId=null,modelsNormalized=false;
+let vrCycleElapsed=0, vrCycleIndex=0;
+const vrCycleKeys=Object.keys(MODULE_METADATA);
+const vrClock=new THREE.Clock();
 const desktopAssemblyScale=new THREE.Vector3();
 const desktopAssemblyPosition=new THREE.Vector3();
 const grabState=new Map();
@@ -484,7 +486,8 @@ function renderVRControlPanel() {
   ctrlCtx.fill();
   ctrlCtx.fillStyle = '#ffffff';
   ctrlCtx.font = 'bold 32px monospace';
-  ctrlCtx.fillText('X', 912, 77);
+  ctrlCtx.font = 'bold 25px monospace';
+   ctrlCtx.fillText('EXIT', 892, 75);
 
   ctrlCtx.fillStyle = '#94a3b8';
   ctrlCtx.font = 'bold 28px monospace';
@@ -510,7 +513,7 @@ function renderVRControlPanel() {
 
   ctrlCtx.fillStyle = '#64748b';
   ctrlCtx.font = '22px sans-serif';
-  ctrlCtx.fillText('Pinch slider handle to adjust explosion · Pinch [X] to dismiss', 50, 330);
+  ctrlCtx.fillText('Pinch slider to explode / assemble · EXIT leaves VR', 50, 330);
 
   ctrlTex.needsUpdate = true;
 }
@@ -522,18 +525,28 @@ function syncVRSliderVisuals(ratio) {
 }
 
 function positionVRControlPanelInFront() {
+  // Keep the control and information panels at a comfortable, head-relative distance.
+  const cameraWorldPos = new THREE.Vector3();
   const cameraDir = new THREE.Vector3();
+  camera.getWorldPosition(cameraWorldPos);
   camera.getWorldDirection(cameraDir);
   cameraDir.y = 0;
-  if(cameraDir.lengthSq() < 0.001) cameraDir.set(0, 0, -1);
+  if (cameraDir.lengthSq() < 0.001) cameraDir.set(0, 0, -1);
   cameraDir.normalize();
 
-  const panelPos = camera.position.clone().addScaledVector(cameraDir, 0.65);
-  panelPos.y = camera.position.y - 0.18;
+  const panelPos = cameraWorldPos.clone().addScaledVector(cameraDir, 0.72);
+  panelPos.y = cameraWorldPos.y - 0.20;
   vrControlPanelGroup.position.copy(panelPos);
+  vrControlPanelGroup.lookAt(
+    cameraWorldPos.x,
+    panelPos.y + 0.03,
+    cameraWorldPos.z
+  );
 
-  const lookTarget = new THREE.Vector3(camera.position.x, panelPos.y + 0.05, camera.position.z);
-  vrControlPanelGroup.lookAt(lookTarget);
+  // Information card sits just above the slider panel, facing the same direction.
+  vrInfoPanel.position.copy(panelPos);
+  vrInfoPanel.position.y += 0.31;
+  vrInfoPanel.quaternion.copy(vrControlPanelGroup.quaternion);
   vrControlPanelGroup.visible = true;
 }
 
@@ -856,23 +869,43 @@ renderer.xr.addEventListener("sessionend",()=>{
 });
 
 function animate(){
- currentExplodeRatio+=(targetExplodeRatio-currentExplodeRatio)*.08;
- 
- updateHandGestures();
- 
- loadedModules.forEach(model=>{
-   let isGrabbed=false;
-   grabState.forEach(v=>{if(v===model)isGrabbed=true;});
-   
-   if(!isGrabbed){
-     const targetPos=model.userData.initialPosition.clone().addScaledVector(model.userData.vector,currentExplodeRatio * 3.0);
-     model.position.lerp(targetPos,0.15);
-     model.quaternion.slerp(model.userData.initialQuaternion,0.15);
-   }
- });
- 
- if(!renderer.xr.isPresenting)controls.update();
- renderer.render(scene,camera);updateDesktopLabels();
+  const delta = Math.min(vrClock.getDelta(), 0.05);
+  currentExplodeRatio+=(targetExplodeRatio-currentExplodeRatio)*.08;
+
+  updateHandGestures();
+
+  if (renderer.xr.isPresenting) {
+    // Slow, continuous turntable rotation while in the immersive experience.
+    assemblyGroup.rotation.y += delta * 0.12;
+
+    // Cycle the highlighted component and its technical information every five seconds.
+    vrCycleElapsed += delta;
+    if (vrCycleElapsed >= 5) {
+      vrCycleElapsed = 0;
+      if (vrCycleKeys.length) {
+        vrCycleIndex = (vrCycleIndex + 1) % vrCycleKeys.length;
+        const nextModel = loadedModules.get(vrCycleKeys[vrCycleIndex]);
+        if (nextModel) selectModule(nextModel);
+      }
+    }
+
+    // Keep the controls in front of the user's current view as they turn or move.
+    positionVRControlPanelInFront();
+  }
+
+  loadedModules.forEach(model=>{
+    let isGrabbed=false;
+    grabState.forEach(v=>{if(v===model)isGrabbed=true;});
+
+    if(!isGrabbed){
+      const targetPos=model.userData.initialPosition.clone().addScaledVector(model.userData.vector,currentExplodeRatio * 3.0);
+      model.position.lerp(targetPos,0.15);
+      model.quaternion.slerp(model.userData.initialQuaternion,0.15);
+    }
+  });
+
+  if(!renderer.xr.isPresenting)controls.update();
+  renderer.render(scene,camera);updateDesktopLabels();
 }
 
 renderer.setAnimationLoop(animate);
