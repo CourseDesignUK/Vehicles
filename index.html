@@ -19,11 +19,10 @@
 #leader-canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}#labels-container{position:fixed;inset:0;pointer-events:none;z-index:3}
 .header-bar{position:fixed;top:0;left:0;right:0;min-height:56px;display:flex;align-items:center;padding:0 24px;background:linear-gradient(180deg,rgba(2,6,23,.95),transparent);z-index:10;pointer-events:none}
 .brand{display:flex;align-items:center;gap:12px}.brand-badge{background:var(--accent);color:#111;padding:4px 8px;border-radius:3px;font-size:11px;font-weight:900;letter-spacing:1.4px}.header-title{font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#e2e8f0}
-.hud-panel,.inspector,.control-deck,#error-panel{background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 25px -5px #0008;z-index:10}
+.hud-panel,.control-deck,#error-panel{background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 25px -5px #0008;z-index:10}
 .hud-panel{position:fixed;top:70px;left:20px;width:270px;padding:14px 16px;font:11px var(--mono)}
-.hud-title,.insp-tag{color:var(--accent);font-size:10px;font-weight:800;letter-spacing:1.4px;margin-bottom:10px}
+.hud-title{color:var(--accent);font-size:10px;font-weight:800;letter-spacing:1.4px;margin-bottom:10px}
 .status-row{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #ffffff0d}.status-row:last-child{border:0}.status-name{color:var(--muted)}.status-prog{color:var(--accent);font-weight:700}.status-ok{color:var(--green);font-weight:700}.status-err{color:var(--red);font-weight:700}
-.inspector{display:none;position:fixed;top:70px;right:20px;width:330px;padding:20px}.insp-tag{font-family:var(--mono)}.insp-title{font-size:17px;margin:6px 0 12px}.insp-desc{color:var(--muted);font-size:12px;line-height:1.6;margin:0 0 16px}.spec-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.spec{padding:10px;background:#02061799;border:1px solid var(--border);border-radius:4px}.spec-k{font:9px var(--mono);color:var(--muted);text-transform:uppercase;margin-bottom:5px}.spec-v{font:11px var(--mono);font-weight:700;overflow-wrap:anywhere}
 .control-deck{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:10px 14px;max-width:calc(100vw - 24px)}
 .btn{border:1px solid var(--border);background:#1e293bcc;color:#e2e8f0;padding:9px 12px;border-radius:4px;cursor:pointer;font:700 10px var(--mono);letter-spacing:.4px;white-space:nowrap}.btn:hover{border-color:var(--accent)}.btn-accent{background:var(--accent);color:#111;border-color:var(--accent)}
 .slider-wrap{display:flex;align-items:center;gap:9px}.deck-txt,.pct{font:700 10px var(--mono);white-space:nowrap}.deck-txt{color:var(--muted)}.pct{color:var(--accent);min-width:34px}input[type=range]{width:160px;accent-color:var(--accent)}
@@ -36,7 +35,6 @@
 #vr-hint{display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9;padding:8px 12px;border:1px solid #ffffff33;background:#0f172acc;border-radius:6px;font:11px var(--mono);color:#fff;pointer-events:none;text-align:center}
 @media(max-width:760px){
   .header-bar{padding:0 12px}.header-title{display:none}.hud-panel{top:60px;left:10px;width:210px;padding:10px}
-  .inspector{top:60px;right:10px;width:min(270px,calc(100vw - 20px));padding:14px}
   .control-deck{bottom:10px;width:calc(100% - 16px);gap:6px;flex-wrap:wrap;justify-content:center;padding:8px}
   .btn{padding:8px}.slider-wrap{gap:6px}input[type=range]{width:100px}.annotation-badge{font-size:9px}.badge-meta{font-size:8px}#vr-hint{top:auto;bottom:100px;width:90%}
 }
@@ -61,16 +59,6 @@
 <header class="header-bar"><div class="brand"><span class="brand-badge">ENTOLI XR</span><span class="header-title">Technical Diagnostic Visualizer</span></div></header>
 <div class="hud-panel" id="hud-panel"><div class="hud-title">Model Load Status</div>
   <div class="status-row" id="hud-vr-status"><span class="status-name">AR renderer</span><span id="st-vr" class="status-prog">READY</span></div>
-</div>
-<div class="inspector" id="inspector">
-  <div class="insp-tag" id="insp-tag">ASSEMBLY VIEW</div><h2 class="insp-title" id="insp-title">Select a component</h2>
-  <p class="insp-desc" id="insp-desc">Select a module or annotation to review technical parameters and materials.</p>
-  <div class="spec-grid">
-    <div class="spec"><div class="spec-k">Part No</div><div class="spec-v" id="card-pno">--</div></div>
-    <div class="spec"><div class="spec-k">Material</div><div class="spec-v" id="card-mat">--</div></div>
-    <div class="spec"><div class="spec-k">Specification</div><div class="spec-v" id="card-flow">--</div></div>
-    <div class="spec"><div class="spec-k">Standard</div><div class="spec-v" id="card-serv">--</div></div>
-  </div>
 </div>
 <div class="control-deck" id="control-deck">
   <button class="btn" id="btn-narration">AUDIO: OFF</button>
@@ -208,44 +196,44 @@ vrInfoPanel.visible = false;
 xrStage.add(vrInfoPanel);
 
 function wrapText(context, text, x, y, maxWidth, lineHeight) {
-    const words = text.split(' ');
-    let line = '';
-    for(let n = 0; n < words.length; n++) {
-        const testLine = line + words[n] + ' ';
-        const metrics = context.measureText(testLine);
-        if (metrics.width > maxWidth && n > 0) {
-            context.fillText(line, x, y);
-            line = words[n] + ' ';
-            y += lineHeight;
-        } else {
-            line = testLine;
-        }
+  const words = text.split(' ');
+  let line = '';
+  for(let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + ' ';
+    const metrics = context.measureText(testLine);
+    if (metrics.width > maxWidth && n > 0) {
+      context.fillText(line, x, y);
+      line = words[n] + ' ';
+      y += lineHeight;
+    } else {
+      line = testLine;
     }
-    context.fillText(line, x, y);
+  }
+  context.fillText(line, x, y);
 }
 
 function updateVRPanel(title, pno, desc) {
-    panelCtx.clearRect(0, 0, 1024, 512);
-    panelCtx.fillStyle = 'rgba(15, 23, 42, 0.95)';
-    panelCtx.beginPath();
-    panelCtx.roundRect(0, 0, 1024, 512, 24);
-    panelCtx.fill();
-    panelCtx.strokeStyle = '#f97316';
-    panelCtx.lineWidth = 6;
-    panelCtx.stroke();
-    panelCtx.fillStyle = '#ffffff';
-    panelCtx.font = 'bold 52px monospace';
-    panelCtx.fillText(title, 48, 90);
-    panelCtx.fillStyle = '#f97316';
-    panelCtx.font = 'bold 36px monospace';
-    panelCtx.fillText('PN: ' + pno, 48, 150);
-    panelCtx.fillStyle = 'rgba(255,255,255,0.1)';
-    panelCtx.fillRect(48, 180, 928, 2);
-    panelCtx.fillStyle = '#94a3b8';
-    panelCtx.font = '36px sans-serif';
-    wrapText(panelCtx, desc, 48, 245, 928, 52);
-    panelTex.needsUpdate = true;
-    vrInfoPanel.visible = true;
+  panelCtx.clearRect(0, 0, 1024, 512);
+  panelCtx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+  panelCtx.beginPath();
+  panelCtx.roundRect(0, 0, 1024, 512, 24);
+  panelCtx.fill();
+  panelCtx.strokeStyle = '#f97316';
+  panelCtx.lineWidth = 6;
+  panelCtx.stroke();
+  panelCtx.fillStyle = '#ffffff';
+  panelCtx.font = 'bold 52px monospace';
+  panelCtx.fillText(title, 48, 90);
+  panelCtx.fillStyle = '#f97316';
+  panelCtx.font = 'bold 36px monospace';
+  panelCtx.fillText('PN: ' + pno, 48, 150);
+  panelCtx.fillStyle = 'rgba(255,255,255,0.1)';
+  panelCtx.fillRect(48, 180, 928, 2);
+  panelCtx.fillStyle = '#94a3b8';
+  panelCtx.font = '36px sans-serif';
+  wrapText(panelCtx, desc, 48, 245, 928, 52);
+  panelTex.needsUpdate = true;
+  if(renderer.xr.isPresenting) vrInfoPanel.visible = true;
 }
 
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.06;controls.minDistance=.2;controls.maxDistance=12;controls.target.set(0,0,0);
@@ -264,17 +252,17 @@ loader.setDRACOLoader(dracoLoader);loader.setCrossOrigin("anonymous");
 const loadProgress = {};
 
 function updateSplashProgress() {
-    const keys = Object.keys(MODULE_METADATA);
-    let totalPct = 0;
-    keys.forEach(k => { totalPct += (loadProgress[k] || 0); });
-    const aggregate = Math.round((totalPct / keys.length) * 100);
-    const splashProg = $("splash-progress");
-    if(splashProg) splashProg.textContent = `LOADING ASSETS: ${aggregate}%`;
-    if(loadedModules.size === keys.length) {
-        if(splashProg) splashProg.textContent = "SYSTEMS READY";
-        $("btn-web").disabled = false;
-        $("btn-vr").disabled = false;
-    }
+  const keys = Object.keys(MODULE_METADATA);
+  let totalPct = 0;
+  keys.forEach(k => { totalPct += (loadProgress[k] || 0); });
+  const aggregate = Math.round((totalPct / keys.length) * 100);
+  const splashProg = $("splash-progress");
+  if(splashProg) splashProg.textContent = `LOADING ASSETS: ${aggregate}%`;
+  if(loadedModules.size === keys.length) {
+    if(splashProg) splashProg.textContent = "SYSTEMS READY";
+    $("btn-web").disabled = false;
+    $("btn-vr").disabled = false;
+  }
 }
 
 function loadModel(key){
@@ -366,7 +354,6 @@ function highlightModule(model,on){
 function clearSelection(){
  if(activeModuleId&&loadedModules.has(activeModuleId))highlightModule(loadedModules.get(activeModuleId),false);
  activeModuleId=null;
- $("inspector").style.display="none";
  vrInfoPanel.visible=false;
  document.querySelectorAll(".annotation-badge").forEach(b=>b.classList.remove("active"));
  window.speechSynthesis.cancel();
@@ -375,10 +362,6 @@ function clearSelection(){
 function selectModule(model){
  if(activeModuleId&&loadedModules.has(activeModuleId))highlightModule(loadedModules.get(activeModuleId),false);
  activeModuleId=model.userData.id;highlightModule(model,true);
- 
- $("inspector").style.display="block";
- $("insp-tag").textContent=model.userData.tag;$("insp-title").textContent=model.userData.name;$("insp-desc").textContent=model.userData.desc;
- $("card-pno").textContent=model.userData.pno;$("card-mat").textContent=model.userData.mat;$("card-flow").textContent=model.userData.flow;$("card-serv").textContent=model.userData.serv;
  
  updateVRPanel(model.userData.name, model.userData.pno, model.userData.desc);
  
@@ -392,7 +375,7 @@ const raycaster=new THREE.Raycaster(),mouse=new THREE.Vector2();
 
 renderer.domElement.addEventListener("pointerdown",e=>{
  if(renderer.xr.isPresenting)return;
- if(e.target.closest?.(".control-deck,.inspector,.hud-panel,.annotation-badge"))return;
+ if(e.target.closest?.(".control-deck,.hud-panel,.annotation-badge"))return;
  mouse.x=e.clientX/innerWidth*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;
  raycaster.setFromCamera(mouse,camera);
  const models=[...loadedModules.values()];const hits=raycaster.intersectObjects(models,true);
