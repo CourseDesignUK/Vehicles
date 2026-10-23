@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ARFF Vehicle Explorer</title>
+<title>ARFF Vehicle Explorer | Entoli XR</title>
 
 <script type="importmap">
 {
@@ -733,6 +733,29 @@ function loadModel(key) {
   });
 }
 
+/* Surface anchor: nearest sampled vertex to the part's bbox centre (model-local). */
+function findAnchor(model) {
+  const c = model.userData.localCenter;
+  const inv = new THREE.Matrix4().copy(model.matrixWorld).invert();
+  const m = new THREE.Matrix4();
+  const v = new THREE.Vector3();
+  let best = null, bestD = Infinity;
+
+  model.traverse(ch => {
+    if (!ch.isMesh || !ch.geometry || !ch.geometry.attributes.position) return;
+    m.multiplyMatrices(inv, ch.matrixWorld);
+    const pos = ch.geometry.attributes.position;
+    const step = Math.max(1, Math.floor(pos.count / 4000));
+    for (let i = 0; i < pos.count; i += step) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(m);
+      const d = v.distanceToSquared(c);
+      if (d < bestD) { bestD = d; best = v.clone(); }
+    }
+  });
+
+  return best || c.clone();
+}
+
 function normalizeScene() {
   assemblyGroup.scale.setScalar(1);
   assemblyGroup.rotation.set(0, Math.PI / 2, 0);
@@ -752,6 +775,7 @@ function normalizeScene() {
   const center = scaledBox.getCenter(new THREE.Vector3());
 
   assemblyGroup.position.sub(center);
+  assemblyGroup.updateMatrixWorld(true);
 
   desktopAssemblyScale.copy(assemblyGroup.scale);
   desktopAssemblyPosition.copy(assemblyGroup.position);
@@ -763,6 +787,7 @@ function normalizeScene() {
     const b = new THREE.Box3().setFromObject(model);
     model.userData.localCenter.copy(b.getCenter(new THREE.Vector3()));
     model.worldToLocal(model.userData.localCenter);
+    model.userData.anchor = findAnchor(model);
   });
 
   camera.position.set(0, 0.1, 1.0);
@@ -1542,15 +1567,15 @@ function updateDesktopLabels() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
 
+  // 1. Project each part's surface anchor to the screen.
+  const items = [];
+
   loadedModules.forEach(model => {
     const badge = model.userData.badgeEl;
     if (!badge) return;
 
-    const wp = model.localToWorld(
-      model.userData.localCenter.clone()
-    );
-
-    const p = wp.project(camera);
+    const anchor = model.userData.anchor || model.userData.localCenter;
+    const p = model.localToWorld(anchor.clone()).project(camera);
 
     if (
       p.z > 1 || p.z < -1 ||
@@ -1563,34 +1588,78 @@ function updateDesktopLabels() {
 
     badge.style.display = "block";
 
-    const sx = (p.x * 0.5 + 0.5) * w;
-    const sy = (-p.y * 0.5 + 0.5) * h;
+    items.push({
+      model,
+      badge,
+      sx: (p.x * 0.5 + 0.5) * w,
+      sy: (-p.y * 0.5 + 0.5) * h,
+      bw: badge.offsetWidth,
+      bh: badge.offsetHeight
+    });
+  });
 
-    const right = sx < w / 2;
+  if (!items.length) return;
 
-    let bx = right
-      ? sx + 55
-      : sx - 55 - badge.offsetWidth;
+  // 2. Split into a left and a right column, balanced by screen x.
+  const margin = 8;
+  const topLimit = 70;
+  const bottomLimit = h - 80;
+  const lead = 60;
 
-    let by = sy;
+  items.sort((a, b) => a.sx - b.sx);
 
-    bx = Math.max(8, Math.min(w - badge.offsetWidth - 8, bx));
-    by = Math.max(75, Math.min(h - 80, by));
+  const minX = items[0].sx;
+  const maxX = items[items.length - 1].sx;
+  const half = Math.ceil(items.length / 2);
+  const left = items.slice(0, half);
+  const right = items.slice(half);
+
+  // 3. Stack each column top to bottom without overlaps.
+  function layoutColumn(col, isLeft) {
+    col.sort((a, b) => a.sy - b.sy);
+
+    col.forEach(it => {
+      it.isLeft = isLeft;
+      it.bx = isLeft
+        ? Math.max(margin, minX - lead - it.bw)
+        : Math.min(w - it.bw - margin, maxX + lead);
+      it.by = Math.max(
+        topLimit + it.bh / 2,
+        Math.min(bottomLimit - it.bh / 2, it.sy)
+      );
+    });
+
+    for (let i = 1; i < col.length; i++) {
+      const gap = col[i - 1].bh / 2 + col[i].bh / 2 + 8;
+      col[i].by = Math.max(col[i].by, col[i - 1].by + gap);
+    }
+
+    for (let i = col.length - 2; i >= 0; i--) {
+      const gap = col[i].bh / 2 + col[i + 1].bh / 2 + 8;
+      col[i].by = Math.min(col[i].by, col[i + 1].by - gap);
+    }
+  }
+
+  layoutColumn(left, true);
+  layoutColumn(right, false);
+
+  // 4. Place badges and draw leader lines.
+  items.forEach(it => {
+    const { badge, sx, sy, bx, by, bw, isLeft } = it;
 
     badge.style.left = bx + "px";
     badge.style.top = by + "px";
 
-    const selected = model.userData.id === activeModuleId;
+    const selected = it.model.userData.id === activeModuleId;
+    const endX = isLeft ? bx + bw : bx;
+    const elbowX = isLeft ? endX + 18 : endX - 18;
 
     ctx.beginPath();
-    ctx.strokeStyle = selected
-      ? "#f97316"
-      : "rgba(249,115,22,.4)";
+    ctx.strokeStyle = selected ? "#f97316" : "rgba(249,115,22,.5)";
     ctx.lineWidth = selected ? 2 : 1;
-
     ctx.moveTo(sx, sy);
-    ctx.lineTo(right ? sx + 24 : sx - 24, sy);
-    ctx.lineTo(right ? bx : bx + badge.offsetWidth, by);
+    ctx.lineTo(elbowX, by);
+    ctx.lineTo(endX, by);
     ctx.stroke();
 
     ctx.beginPath();
@@ -1799,6 +1868,7 @@ renderer.xr.addEventListener("sessionend", () => {
   if (modelsNormalized) {
     assemblyGroup.scale.copy(desktopAssemblyScale);
     assemblyGroup.position.copy(desktopAssemblyPosition);
+    assemblyGroup.rotation.set(0, Math.PI / 2, 0);
   }
 
   grid.visible = true;
