@@ -44,7 +44,7 @@ All 3D assets must sit in the root directory relative to `index.html`:
 ├── intro.mp4              # Ambient splash loop
 ├── Striker.glb            # Main chassis module
 ├── BumperMonitor.glb      # Front turret assembly
-├── DelugeSystem.glb       # Undercarriage deluge manifold
+├── DelugeSystem.glb       # Deluge manifold
 ├── HRET.glb               # Snozzle boom and piercing nozzle
 └── Hose.glb               # Preconnected hose reel unit
 ```
