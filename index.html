@@ -38,12 +38,6 @@
   .control-deck{bottom:10px;width:calc(100% - 16px);gap:6px;flex-wrap:wrap;justify-content:center;padding:8px}
   .btn{padding:8px}.slider-wrap{gap:6px}input[type=range]{width:100px}.annotation-badge{font-size:9px}.badge-meta{font-size:8px}#vr-hint{top:auto;bottom:100px;width:90%}
 }
-
-
-<!-- ****** Splash screen info-->
-
-
-  
 </style>
 </head>
 <body>
@@ -53,7 +47,7 @@
   </video>
   <div class="start-content">
     <h1 class="splash-title">ARFF VEHICLE EXPLORER</h1>
-    <p class="splash-sub">Technical Training · 2026</p>
+    <p class="splash-sub">Entoli XR · Technical Training · 2026</p>
     <div class="start-actions">
       <button class="commence-btn" id="btn-web" disabled>WEB 3D</button>
       <button class="commence-btn vr" id="btn-vr" disabled>ENTER PASSTHROUGH</button>
@@ -84,14 +78,6 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { XRHandModelFactory } from "three/addons/webxr/XRHandModelFactory.js";
 
-
-
-<!--   ******** Model parts and description text-->
-
-
-
-
-  
 const MODULE_METADATA = {
   striker: { 
     file: "Striker.glb", 
@@ -119,7 +105,7 @@ const MODULE_METADATA = {
     file: "DelugeSystem.glb", 
     name: "Deluge System", 
     tag: "PROTECTION", 
-    desc: "Deluge protection system.", 
+    desc: "Undercarriage and chassis deluge protection system.", 
     pno: "DS-003", 
     mat: "Stainless Steel", 
     flow: "50 GPM", 
@@ -514,9 +500,6 @@ function renderVRControlPanel() {
 
   ctrlTex.needsUpdate = true;
 }
-
-
-  <!-- *******VR COntrols   -->
 renderVRControlPanel();
 
 function syncVRSliderVisuals(ratio) {
