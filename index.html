@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ARFF Vehicle Explorer | Entoli XR</title>
+<title>ARFF Vehicle Explorer</title>
 
 <script type="importmap">
 {
@@ -364,7 +363,7 @@ input[type=range] { width: 160px; accent-color: var(--accent); }
 
 <div id="vr-hint">
   Pinch or use the trigger to grab parts. Use the floating panel to explode or assemble.
-  Pinch EXIT to leave Passthrough.
+  Poke EXIT to leave Passthrough.
 </div>
 
 <div id="error-panel">
@@ -1007,8 +1006,110 @@ vrHandleMesh.rotation.x = Math.PI / 2;
 vrHandleMesh.position.set(vrSliderTrackMinX, vrSliderY, 0.015);
 vrControlPanelGroup.add(vrHandleMesh);
 
-// No invisible EXIT hitbox is used.
-// Interaction is calculated against the visible canvas coordinates.
+/* VR PANEL INTERACTION (poke / pinch / ray) */
+const PANEL_W = 0.55, PANEL_H = 0.215;
+const EXIT_RECT   = { x0: 830, x1: 1010, y0: 5,   y1: 125 };
+const SLIDER_RECT = { x0: 190, x1: 850,  y0: 140, y1: 260 };
+const uiState = { exitHover: false, sliderActive: false };
+const panelSources = new Map();
+let smoothedRatio = 0;
+let panelPlacePending = 0;
+const _tip = new THREE.Vector3(), _thumb = new THREE.Vector3();
+
+function setUi(key, val) {
+  if (uiState[key] === val) return;
+  uiState[key] = val;
+  if (key === "sliderActive") vrHandleMesh.scale.setScalar(val ? 1.35 : 1);
+  renderVRControlPanel();
+}
+
+const inRect = (p, r) => p.x >= r.x0 && p.x <= r.x1 && p.y >= r.y0 && p.y <= r.y1;
+const ratioFromX = x => THREE.MathUtils.clamp((x - 240) / 560, 0, 1) * 2;
+
+function driveSlider(x) {
+  smoothedRatio += (ratioFromX(x) - smoothedRatio) * 0.6;
+  setExplode(smoothedRatio);
+}
+
+// d = distance in front of the panel (+ = user side), x/y = canvas coords
+function getPanelPoint(worldPos) {
+  vrControlPanelGroup.updateMatrixWorld(true);
+  const l = vrControlPanelGroup.worldToLocal(worldPos.clone());
+  return { d: l.z, x: (l.x / PANEL_W + 0.5) * 1024, y: (0.5 - l.y / PANEL_H) * 400 };
+}
+
+function jointPos(hand, name, out) {
+  const j = hand.joints && hand.joints[name];
+  return j ? out.setFromMatrixPosition(j.matrixWorld) : null;
+}
+
+function rayPanelHit(controller) {
+  const origin = new THREE.Vector3().setFromMatrixPosition(controller.matrixWorld);
+  const rot = new THREE.Matrix4().extractRotation(controller.matrixWorld);
+  const dir = new THREE.Vector3(0, 0, -1).applyMatrix4(rot);
+  vrControlPanelGroup.updateMatrixWorld(true);
+  const hit = new THREE.Raycaster(origin, dir, 0, 5).intersectObject(ctrlMesh, false)[0];
+  return hit && hit.uv ? { x: hit.uv.x * 1024, y: (1 - hit.uv.y) * 400 } : null;
+}
+
+function updatePanelInteraction() {
+  if (!vrControlPanelGroup.visible) return;
+  let exitHover = false, sliderActive = false;
+
+  [hand1, hand2].forEach(hand => {
+    let s = panelSources.get(hand);
+    if (!s) { s = { mode: null, armed: true }; panelSources.set(hand, s); }
+
+    const tip = jointPos(hand, "index-finger-tip", _tip);
+    const thumb = jointPos(hand, "thumb-tip", _thumb);
+    if (!tip || !thumb) { s.mode = null; return; }
+
+    const p = getPanelPoint(tip);
+    const pinchDist = tip.distanceTo(thumb);
+    const pinched = pinchDist < (s.mode === "pinch" ? 0.045 : 0.028); // hysteresis
+    const pp = getPanelPoint(tip.clone().add(thumb).multiplyScalar(0.5));
+
+    const overExit = inRect(p, EXIT_RECT);
+    if (overExit && p.d < 0.12 && p.d > -0.10) exitHover = true;
+
+    // EXIT: fingertip poke
+    if (overExit && p.d < 0.015 && p.d > -0.10) {
+      if (s.armed && !s.mode) { s.armed = false; exitVRSession(); return; }
+    } else if (p.d > 0.04 || !overExit) {
+      s.armed = true;
+    }
+
+    // Slider: poke to engage, or pinch close to the panel
+    if (!s.mode) {
+      if (inRect(p, SLIDER_RECT) && p.d < 0.03 && p.d > -0.10) {
+        s.mode = "poke"; smoothedRatio = targetExplodeRatio;
+      } else if (pinched && inRect(pp, SLIDER_RECT) && Math.abs(pp.d) < 0.10) {
+        s.mode = "pinch"; smoothedRatio = targetExplodeRatio;
+      }
+    }
+
+    if (s.mode === "poke") {
+      if (p.d > 0.07 || p.d < -0.20 || Math.abs(p.y - 200) > 150) s.mode = null;
+      else driveSlider(p.x);
+    } else if (s.mode === "pinch") {
+      if (!pinched || Math.abs(pp.d) > 0.25) s.mode = null;
+      else driveSlider(pp.x);
+    }
+    if (s.mode) sliderActive = true;
+  });
+
+  // Controllers holding the slider (ray)
+  grabState.forEach((item, src) => {
+    if (item && item.type === "vr-slider" && !src.joints) {
+      const h = rayPanelHit(src);
+      if (h) driveSlider(h.x);
+      sliderActive = true;
+    }
+  });
+
+  setUi("exitHover", exitHover);
+  setUi("sliderActive", sliderActive);
+}
 
 function renderVRControlPanel() {
   ctrlCtx.clearRect(0, 0, 1024, 400);
@@ -1027,7 +1128,7 @@ function renderVRControlPanel() {
   ctrlCtx.fillText("ASSEMBLY CONTROL", 50, 75);
 
   // Visible EXIT button.
-  ctrlCtx.fillStyle = "#ef4444";
+  ctrlCtx.fillStyle = uiState.exitHover ? "#f87171" : "#ef4444";
   ctrlCtx.beginPath();
   ctrlCtx.roundRect(850, 20, 140, 90, 12);
   ctrlCtx.fill();
@@ -1070,7 +1171,7 @@ function renderVRControlPanel() {
   ctrlCtx.fillStyle = "#94a3b8";
   ctrlCtx.font = "22px sans-serif";
   ctrlCtx.fillText("0–200% EXPLODE", 50, 330);
-  ctrlCtx.fillText("Pinch or trigger EXIT to leave VR", 50, 365);
+  ctrlCtx.fillText("Poke EXIT with a fingertip", 50, 365);
 
   ctrlTex.needsUpdate = true;
 }
@@ -1110,122 +1211,30 @@ function exitVRSession() {
   });
 }
 
-/*
- * VISIBLE PANEL HIT-TESTING
- *
- * Converts a world-space point into the coordinates of the visible
- * canvas texture. The canvas is 1024 x 400 and the panel is 0.55 x 0.215m.
- */
-function getVRPanelCanvasPoint(worldPosition) {
-  if (!vrControlPanelGroup.visible) return null;
-
-  vrControlPanelGroup.updateMatrixWorld(true);
-
-  const local = vrControlPanelGroup.worldToLocal(
-    worldPosition.clone()
-  );
-
-  // Reject points too far in front of or behind the panel.
-  if (Math.abs(local.z) > 0.14) return null;
-
-  const panelWidth = 0.55;
-  const panelHeight = 0.215;
-
-  if (
-    Math.abs(local.x) > panelWidth / 2 ||
-    Math.abs(local.y) > panelHeight / 2
-  ) {
-    return null;
-  }
-
-  return {
-    x: (local.x / panelWidth + 0.5) * 1024,
-    y: (0.5 - local.y / panelHeight) * 400
-  };
-}
-
-/*
- * Returns true when the point interacts with the EXIT button or slider.
- * Controller triggers and hand pinches share this function.
- */
-function interactWithVRPanel(worldPosition, source, isStart = true) {
-  if (!vrControlPanelGroup.visible) return false;
-
-  const point = getVRPanelCanvasPoint(worldPosition);
-  if (!point) return false;
-
-  const { x, y } = point;
-
-  // Visible EXIT rectangle: x=850..990, y=20..110.
-  if (
-    isStart &&
-    x >= 850 && x <= 990 &&
-    y >= 20 && y <= 110
-  ) {
-    exitVRSession();
-    return true;
-  }
-
-  // Visible slider track: x=240..800, y=185..215.
-  // Give it a slightly larger vertical interaction area.
-  if (
-    x >= 220 && x <= 820 &&
-    y >= 155 && y <= 245
-  ) {
-    if (isStart) {
-      grabState.set(source, { type: "vr-slider" });
-    }
-
-    const ratio = THREE.MathUtils.clamp(
-      (x - 240) / 560, 0, 1
-    ) * 2;
-
-    setExplode(ratio);
-    return true;
-  }
-
-  return false;
-}
-
 function positionVRControlPanelInFront() {
-  const cameraWorldPos = new THREE.Vector3();
-  const cameraDir = new THREE.Vector3();
+  const cam = renderer.xr.getCamera();
+  const camPos = new THREE.Vector3(), camDir = new THREE.Vector3();
+  cam.getWorldPosition(camPos);
+  cam.getWorldDirection(camDir);
+  camDir.y = 0;
+  if (camDir.lengthSq() < 0.001) camDir.set(0, 0, -1);
+  camDir.normalize();
 
-  camera.getWorldPosition(cameraWorldPos);
-  camera.getWorldDirection(cameraDir);
-
-  cameraDir.y = 0;
-
-  if (cameraDir.lengthSq() < 0.001) {
-    cameraDir.set(0, 0, -1);
-  }
-
-  cameraDir.normalize();
-
-  // Place panel 1.2m ahead, at chest height.
-  const panelPos = cameraWorldPos.clone().addScaledVector(cameraDir, 1.2);
-  panelPos.y = Math.max(0.9, cameraWorldPos.y - 0.35);
-
+  const panelPos = camPos.clone().addScaledVector(camDir, 0.5);   // arm's reach
+  panelPos.y = Math.max(0.6, camPos.y - 0.35);
   vrControlPanelGroup.position.copy(panelPos);
 
-  vrControlPanelGroup.rotation.set(
-    0,
-    Math.atan2(-cameraDir.x, -cameraDir.z),
-    0
-  );
+  const yaw = Math.atan2(-camDir.x, -camDir.z);
+  vrControlPanelGroup.rotation.order = "YXZ";
+  vrControlPanelGroup.rotation.set(-0.35, yaw, 0);                // tilt up toward eyes
 
   const cameraRight = new THREE.Vector3()
-    .crossVectors(cameraDir, new THREE.Vector3(0, 1, 0))
-    .normalize();
-
+    .crossVectors(camDir, new THREE.Vector3(0, 1, 0)).normalize();
   const infoPos = assemblyGroup.position.clone();
   infoPos.addScaledVector(cameraRight, 0.90);
   infoPos.y = 1.55;
-
   vrInfoPanel.position.copy(infoPos);
-
-  const yaw = Math.atan2(-cameraDir.x, -cameraDir.z) - 0.25;
-  vrInfoPanel.rotation.set(0, yaw, 0);
+  vrInfoPanel.rotation.set(0, yaw - 0.25, 0);
 
   vrControlPanelGroup.visible = true;
 }
@@ -1285,18 +1294,21 @@ function findTargetObject(controller) {
 }
 
 function onSelectStart(event) {
+  if (event.data && event.data.hand) return;
   const controller = event.target;
 
-  const controllerPos = new THREE.Vector3()
-    .setFromMatrixPosition(controller.matrixWorld);
-
-  // Interact with the visible panel before trying to grab a model.
-  if (interactWithVRPanel(controllerPos, controller, true)) {
+  const hit = rayPanelHit(controller);
+  if (hit) {
+    if (inRect(hit, EXIT_RECT)) { exitVRSession(); return; }
+    if (inRect(hit, SLIDER_RECT)) {
+      grabState.set(controller, { type: "vr-slider" });
+      smoothedRatio = targetExplodeRatio;
+      driveSlider(hit.x);
+    }
     return;
   }
 
   const targetObj = findTargetObject(controller);
-
   if (targetObj) {
     controller.attach(targetObj);
     grabState.set(controller, targetObj);
@@ -1307,15 +1319,11 @@ function onSelectStart(event) {
 }
 
 function onSelectEnd(event) {
+  if (event.data && event.data.hand) return;
   const controller = event.target;
   const item = grabState.get(controller);
-
   if (!item) return;
-
-  if (item.type !== "vr-slider") {
-    assemblyGroup.attach(item);
-  }
-
+  if (item.type !== "vr-slider") assemblyGroup.attach(item);
   grabState.delete(controller);
 }
 
@@ -1395,6 +1403,8 @@ let gestureBaseExplode = 0;
 function updateHandGestures() {
   if (!renderer.xr.isPresenting) return;
 
+  updatePanelInteraction();
+
   [hand1, hand2].forEach(hand => {
     if (
       !hand.joints ||
@@ -1423,8 +1433,9 @@ function updateHandGestures() {
     if (!wasPinched && isPinched) {
       handPinchStates.set(hand, true);
 
-      // EXIT and slider interaction use the visible panel coordinates.
-      if (interactWithVRPanel(pinchPoint, hand, true)) {
+      // A pinch near the control panel never grabs a model.
+      const pp = getPanelPoint(pinchPoint);
+      if (Math.abs(pp.d) < 0.15 && pp.x > -50 && pp.x < 1074 && pp.y > -50 && pp.y < 450) {
         return;
       }
 
@@ -1462,48 +1473,6 @@ function updateHandGestures() {
 
         grabState.delete(hand);
       }
-    }
-  });
-
-  // Update the slider while a hand or controller is holding it.
-  grabState.forEach((item, source) => {
-    if (
-      !item ||
-      item.type !== "vr-slider" ||
-      !vrControlPanelGroup.visible
-    ) {
-      return;
-    }
-
-    let handPos;
-
-    if (
-      source.joints &&
-      source.joints["index-finger-tip"] &&
-      source.joints["thumb-tip"]
-    ) {
-      const iTip = new THREE.Vector3().setFromMatrixPosition(
-        source.joints["index-finger-tip"].matrixWorld
-      );
-
-      const tTip = new THREE.Vector3().setFromMatrixPosition(
-        source.joints["thumb-tip"].matrixWorld
-      );
-
-      handPos = iTip.add(tTip).multiplyScalar(0.5);
-    } else {
-      handPos = new THREE.Vector3()
-        .setFromMatrixPosition(source.matrixWorld);
-    }
-
-    const point = getVRPanelCanvasPoint(handPos);
-
-    if (point) {
-      const ratio = THREE.MathUtils.clamp(
-        (point.x - 240) / 560, 0, 1
-      ) * 2;
-
-      setExplode(ratio);
     }
   });
 
@@ -1798,6 +1767,7 @@ renderer.xr.addEventListener("sessionstart", () => {
   vrCycleElapsed = 0;
   vrCycleIndex = Math.max(0, vrCycleKeys.indexOf(activeModuleId));
 
+  panelPlacePending = 15;
   positionVRControlPanelInFront();
   vrControlPanelGroup.visible = true;
 
@@ -1822,6 +1792,8 @@ renderer.xr.addEventListener("sessionend", () => {
 
   grabState.clear();
   handPinchStates.clear();
+  panelSources.clear();
+  smoothedRatio = 0;
   gestureActive = false;
 
   if (modelsNormalized) {
@@ -1847,6 +1819,10 @@ function animate() {
     (targetExplodeRatio - currentExplodeRatio) * 0.08;
 
   updateHandGestures();
+
+  if (panelPlacePending > 0 && renderer.xr.isPresenting && --panelPlacePending === 0) {
+    positionVRControlPanelInFront();   // re-place once the headset pose is valid
+  }
 
   if (renderer.xr.isPresenting) {
     assemblyGroup.rotation.y += delta * 0.12;
