@@ -1,9 +1,11 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Vehicle Explorer</title>
+<title>ARFF Vehicle Explorer | Entoli XR</title>
+
 <script type="importmap">
 {
   "imports": {
@@ -12,39 +14,307 @@
   }
 }
 </script>
+
 <style>
-:root{--panel:rgba(15,23,42,.9);--border:rgba(71,85,105,.85);--accent:#f97316;--glow:rgba(249,115,22,.35);--text:#f8fafc;--muted:#94a3b8;--green:#10b981;--red:#ef4444;--mono:"SF Mono","JetBrains Mono",Consolas,monospace}
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden}body{background:radial-gradient(circle at center,#1e293b,#0f172a 60%,#020617);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
-#webgl-container{position:fixed;inset:0;z-index:1}#webgl-container canvas{display:block;width:100%;height:100%;touch-action:none}
-#leader-canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}#labels-container{position:fixed;inset:0;pointer-events:none;z-index:3}
-.header-bar{position:fixed;top:0;left:0;right:0;min-height:56px;display:flex;align-items:center;padding:0 24px;background:linear-gradient(180deg,rgba(2,6,23,.95),transparent);z-index:10;pointer-events:none}
-.brand{display:flex;align-items:center;gap:12px}.brand-badge{background:var(--accent);color:#111;padding:4px 8px;border-radius:3px;font-size:11px;font-weight:900;letter-spacing:1.4px}.header-title{font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#e2e8f0}
-.hud-panel,.control-deck,#error-panel{background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 25px -5px #0008;z-index:10}
-.hud-panel{position:fixed;top:70px;left:20px;width:270px;padding:14px 16px;font:11px var(--mono)}
-.hud-title{color:var(--accent);font-size:10px;font-weight:800;letter-spacing:1.4px;margin-bottom:10px}
-.status-row{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #ffffff0d}.status-row:last-child{border:0}.status-name{color:var(--muted)}.status-prog{color:var(--accent);font-weight:700}.status-ok{color:var(--green);font-weight:700}.status-err{color:var(--red);font-weight:700}
-.control-deck{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:10px 14px;max-width:calc(100vw - 24px)}
-.btn{border:1px solid var(--border);background:#1e293bcc;color:#e2e8f0;padding:9px 12px;border-radius:4px;cursor:pointer;font:700 10px var(--mono);letter-spacing:.4px;white-space:nowrap}.btn:hover{border-color:var(--accent)}.btn-accent{background:var(--accent);color:#111;border-color:var(--accent)}
-.slider-wrap{display:flex;align-items:center;gap:9px}.deck-txt,.pct{font:700 10px var(--mono);white-space:nowrap}.deck-txt{color:var(--muted)}.pct{color:var(--accent);min-width:34px}input[type=range]{width:160px;accent-color:var(--accent)}
-.annotation-badge{position:absolute;transform:translateY(-50%);pointer-events:auto;padding:8px 10px;background:#0f172aeb;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:4px;color:white;font:11px var(--mono);white-space:nowrap;cursor:pointer;box-shadow:0 4px 15px #0006}.annotation-badge.active{box-shadow:0 0 14px var(--glow);border-color:var(--accent)}.badge-title{font-weight:700}.badge-title span{color:var(--accent);margin-right:6px}.badge-meta{color:var(--muted);font-size:9px;margin-top:4px}
-#start-screen{position:fixed;inset:0;z-index:50;background:#020617;display:flex;align-items:center;justify-content:center;transition:opacity .5s}
-#bg-video{position:absolute;width:100%;height:100%;object-fit:cover;opacity:0.4;z-index:0;pointer-events:none}
-.start-content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:24px}.splash-title{font-size:clamp(1.5rem,4vw,2.7rem);font-weight:200;letter-spacing:clamp(4px,1vw,12px);text-transform:uppercase;margin:0;text-shadow:0 2px 14px #000}.splash-sub{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#f97316;margin:14px 0 28px}.start-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}.commence-btn{background:#0008;color:#fff;border:1px solid #ffffff66;padding:13px 26px;font-size:11px;font-weight:700;letter-spacing:3px;cursor:pointer;backdrop-filter:blur(4px)}.commence-btn.vr{border-color:var(--accent);color:var(--accent)}.commence-btn:disabled{opacity:.4;cursor:not-allowed}
-#splash-progress{color:var(--accent);font:700 13px var(--mono);letter-spacing:2px;margin-top:22px;text-transform:uppercase}
-#error-panel{display:none;position:fixed;left:20px;bottom:100px;width:440px;max-width:calc(100vw - 40px);padding:14px;color:#fecaca;background:#450a0aef;border-color:var(--red);font:11px var(--mono);white-space:pre-wrap;line-height:1.5}#error-title{font-weight:900;color:var(--red);margin-bottom:7px}
-#vr-hint{display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9;padding:8px 12px;border:1px solid #ffffff33;background:#0f172acc;border-radius:6px;font:11px var(--mono);color:#fff;pointer-events:none;text-align:center}
-@media(max-width:760px){
-  .header-bar{padding:0 12px}.header-title{display:none}.hud-panel{top:60px;left:10px;width:210px;padding:10px}
-  .control-deck{bottom:10px;width:calc(100% - 16px);gap:6px;flex-wrap:wrap;justify-content:center;padding:8px}
-  .btn{padding:8px}.slider-wrap{gap:6px}input[type=range]{width:100px}.annotation-badge{font-size:9px}.badge-meta{font-size:8px}#vr-hint{top:auto;bottom:100px;width:90%}
+:root {
+  --panel: rgba(15,23,42,.9);
+  --border: rgba(71,85,105,.85);
+  --accent: #f97316;
+  --glow: rgba(249,115,22,.35);
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --green: #10b981;
+  --red: #ef4444;
+  --mono: "SF Mono","JetBrains Mono",Consolas,monospace;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  background: radial-gradient(circle at center,#1e293b,#0f172a 60%,#020617);
+  color: var(--text);
+  font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+}
+#webgl-container {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+#webgl-container canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+#leader-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+#labels-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.header-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  background: linear-gradient(180deg,rgba(2,6,23,.95),transparent);
+  z-index: 10;
+  pointer-events: none;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-badge {
+  background: var(--accent);
+  color: #111;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+}
+.header-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #e2e8f0;
+}
+.hud-panel, .control-deck, #error-panel {
+  background: var(--panel);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px #0008;
+  z-index: 10;
+}
+.hud-panel {
+  position: fixed;
+  top: 70px;
+  left: 20px;
+  width: 270px;
+  padding: 14px 16px;
+  font: 11px var(--mono);
+}
+.hud-title {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  margin-bottom: 10px;
+}
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid #ffffff0d;
+}
+.status-row:last-child { border: 0; }
+.status-name { color: var(--muted); }
+.status-prog { color: var(--accent); font-weight: 700; }
+.status-ok { color: var(--green); font-weight: 700; }
+.status-err { color: var(--red); font-weight: 700; }
+
+.control-deck {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  max-width: calc(100vw - 24px);
+}
+.btn {
+  border: 1px solid var(--border);
+  background: #1e293bcc;
+  color: #e2e8f0;
+  padding: 9px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font: 700 10px var(--mono);
+  letter-spacing: .4px;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); }
+.btn-accent { background: var(--accent); color: #111; border-color: var(--accent); }
+.slider-wrap { display: flex; align-items: center; gap: 9px; }
+.deck-txt, .pct { font: 700 10px var(--mono); white-space: nowrap; }
+.deck-txt { color: var(--muted); }
+.pct { color: var(--accent); min-width: 34px; }
+input[type=range] { width: 160px; accent-color: var(--accent); }
+
+.annotation-badge {
+  position: absolute;
+  transform: translateY(-50%);
+  pointer-events: auto;
+  padding: 8px 10px;
+  background: #0f172aeb;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  color: white;
+  font: 11px var(--mono);
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 4px 15px #0006;
+}
+.annotation-badge.active {
+  box-shadow: 0 0 14px var(--glow);
+  border-color: var(--accent);
+}
+.badge-title { font-weight: 700; }
+.badge-title span { color: var(--accent); margin-right: 6px; }
+.badge-meta { color: var(--muted); font-size: 9px; margin-top: 4px; }
+
+#start-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #020617;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity .5s;
+}
+#bg-video {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: .4;
+  z-index: 0;
+  pointer-events: none;
+}
+.start-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px;
+}
+.splash-title {
+  font-size: clamp(1.5rem,4vw,2.7rem);
+  font-weight: 200;
+  letter-spacing: clamp(4px,1vw,12px);
+  text-transform: uppercase;
+  margin: 0;
+  text-shadow: 0 2px 14px #000;
+}
+.splash-sub {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #f97316;
+  margin: 14px 0 28px;
+}
+.start-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.commence-btn {
+  background: #0008;
+  color: #fff;
+  border: 1px solid #ffffff66;
+  padding: 13px 26px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+.commence-btn.vr { border-color: var(--accent); color: var(--accent); }
+.commence-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+#splash-progress {
+  color: var(--accent);
+  font: 700 13px var(--mono);
+  letter-spacing: 2px;
+  margin-top: 22px;
+  text-transform: uppercase;
+}
+#error-panel {
+  display: none;
+  position: fixed;
+  left: 20px;
+  bottom: 100px;
+  width: 440px;
+  max-width: calc(100vw - 40px);
+  padding: 14px;
+  color: #fecaca;
+  background: #450a0aef;
+  border-color: var(--red);
+  font: 11px var(--mono);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+#error-title { font-weight: 900; color: var(--red); margin-bottom: 7px; }
+#vr-hint {
+  display: none;
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9;
+  padding: 8px 12px;
+  border: 1px solid #ffffff33;
+  background: #0f172acc;
+  border-radius: 6px;
+  font: 11px var(--mono);
+  color: #fff;
+  pointer-events: none;
+  text-align: center;
+}
+@media(max-width:760px) {
+  .header-bar { padding: 0 12px; }
+  .header-title { display: none; }
+  .hud-panel { top: 60px; left: 10px; width: 210px; padding: 10px; }
+  .control-deck {
+    bottom: 10px;
+    width: calc(100% - 16px);
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 8px;
+  }
+  .btn { padding: 8px; }
+  .slider-wrap { gap: 6px; }
+  input[type=range] { width: 100px; }
+  .annotation-badge { font-size: 9px; }
+  .badge-meta { font-size: 8px; }
+  #vr-hint { top: auto; bottom: 100px; width: 90%; }
 }
 </style>
 </head>
+
 <body>
+
 <div id="start-screen">
   <video id="bg-video" autoplay muted playsinline loop>
     <source src="intro.mp4" type="video/mp4">
   </video>
+
   <div class="start-content">
     <h1 class="splash-title">ARFF VEHICLE EXPLORER</h1>
     <p class="splash-sub">Entoli XR · Technical Training · 2026</p>
@@ -53,23 +323,54 @@
       <button class="commence-btn vr" id="btn-vr" disabled>ENTER PASSTHROUGH</button>
     </div>
     <div id="splash-progress">INITIALIZING...</div>
-    <p style="max-width:520px;color:#94a3b8;font-size:12px;line-height:1.6;margin-top:22px">For Quest 3, open this page in Meta Quest Browser over HTTPS. Wait for the model status panel to show OK before entering Passthrough.</p>
+    <p style="max-width:520px;color:#94a3b8;font-size:12px;line-height:1.6;margin-top:22px">
+      For Quest 3, open this page in Meta Quest Browser over HTTPS.
+      Wait for all models to load before entering Passthrough.
+    </p>
   </div>
 </div>
-<header class="header-bar"><div class="brand"><span class="brand-badge">Striker</span><span class="header-title">Technical Diagnostic Visualiser</span></div></header>
-<div class="hud-panel" id="hud-panel"><div class="hud-title">Model Load Status</div>
-  <div class="status-row" id="hud-vr-status"><span class="status-name">AR renderer</span><span id="st-vr" class="status-prog">READY</span></div>
+
+<header class="header-bar">
+  <div class="brand">
+    <span class="brand-badge">Striker</span>
+    <span class="header-title">Technical Diagnostic Visualiser</span>
+  </div>
+</header>
+
+<div class="hud-panel" id="hud-panel">
+  <div class="hud-title">Model Load Status</div>
+  <div class="status-row" id="hud-vr-status">
+    <span class="status-name">AR renderer</span>
+    <span id="st-vr" class="status-prog">READY</span>
+  </div>
 </div>
+
 <div class="control-deck" id="control-deck">
   <button class="btn" id="btn-narration">AUDIO: OFF</button>
   <button class="btn btn-accent" id="btn-assemble">ASSEMBLE</button>
-  <div class="slider-wrap"><span class="deck-txt">EXPLODE</span><input id="explode-slider" aria-label="Explode assembly" type="range" min="0" max="200" value="0"><span class="pct" id="pct-label">0%</span></div>
+  <div class="slider-wrap">
+    <span class="deck-txt">EXPLODE</span>
+    <input id="explode-slider" aria-label="Explode assembly"
+           type="range" min="0" max="200" value="0">
+    <span class="pct" id="pct-label">0%</span>
+  </div>
   <button class="btn" id="btn-explode">EXPLODE</button>
   <button class="btn" id="btn-reset-cam">RESET VIEW</button>
 </div>
-<div id="webgl-container"></div><canvas id="leader-canvas"></canvas><div id="labels-container"></div>
-<div id="vr-hint">Pinch or trigger to grab parts. Use the floating control panel to explode or close.</div>
-<div id="error-panel"><div id="error-title">SYSTEM ALERT</div><div id="error-message"></div></div>
+
+<div id="webgl-container"></div>
+<canvas id="leader-canvas"></canvas>
+<div id="labels-container"></div>
+
+<div id="vr-hint">
+  Pinch or use the trigger to grab parts. Use the floating panel to explode or assemble.
+  Pinch EXIT to leave Passthrough.
+</div>
+
+<div id="error-panel">
+  <div id="error-title">SYSTEM ALERT</div>
+  <div id="error-message"></div>
+</div>
 
 <script type="module">
 import * as THREE from "three";
@@ -79,333 +380,574 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { XRHandModelFactory } from "three/addons/webxr/XRHandModelFactory.js";
 
 const MODULE_METADATA = {
-  striker: { 
-    file: "Striker.glb", 
-    name: "Main Chassis", 
-    tag: "STRUCTURAL", 
-    desc: "Primary load-bearing structure and cab.", 
-    pno: "STK-001", 
-    mat: "Aluminum / Composite", 
-    flow: "N/A", 
-    serv: "NFPA 414", 
-    vector: new THREE.Vector3(0, 0, 0) 
+  striker: {
+    file: "Striker.glb",
+    name: "Main Chassis",
+    tag: "STRUCTURAL",
+    desc: "Primary load-bearing structure and cab.",
+    pno: "STK-001",
+    mat: "Aluminum / Composite",
+    flow: "N/A",
+    serv: "NFPA 414",
+    vector: new THREE.Vector3(0, 0, 0)
   },
-  bumper_monitor: { 
-    file: "BumperMonitor.glb", 
-    name: "Bumper Monitor", 
-    tag: "EXTINGUISHING", 
-    desc: "Low-attack high-volume bumper turret.", 
-    pno: "BM-002", 
-    mat: "Brass / Aluminum", 
-    flow: "300 GPM", 
-    serv: "CAP 168", 
-    vector: new THREE.Vector3(0, 0, 1.5) 
+  bumper_monitor: {
+    file: "BumperMonitor.glb",
+    name: "Bumper Monitor",
+    tag: "EXTINGUISHING",
+    desc: "Low-attack high-volume bumper turret.",
+    pno: "BM-002",
+    mat: "Brass / Aluminum",
+    flow: "300 GPM",
+    serv: "CAP 168",
+    vector: new THREE.Vector3(0, 0, 1.5)
   },
-  deluge_system: { 
-    file: "DelugeSystem.glb", 
-    name: "Deluge System", 
-    tag: "PROTECTION", 
-    desc: "Undercarriage and chassis deluge protection system.", 
-    pno: "DS-003", 
-    mat: "Stainless Steel", 
-    flow: "50 GPM", 
-    serv: "CAP 168", 
-    vector: new THREE.Vector3(0, 1.0, 0) 
+  deluge_system: {
+    file: "DelugeSystem.glb",
+    name: "Deluge System",
+    tag: "PROTECTION",
+    desc: "Undercarriage and chassis deluge protection system.",
+    pno: "DS-003",
+    mat: "Stainless Steel",
+    flow: "50 GPM",
+    serv: "CAP 168",
+    vector: new THREE.Vector3(0, 1.0, 0)
   },
-  hret: { 
-    file: "HRET.glb", 
-    name: "High Reach Extendable Turret", 
-    tag: "EXTINGUISHING", 
-    desc: "Snozzle HRET for piercing and elevated application.", 
-    pno: "HR-004", 
-    mat: "Reinforced Alloy", 
-    flow: "1000 GPM", 
-    serv: "FAA / ICAO", 
-    vector: new THREE.Vector3(0, 2.0, 0) 
+  hret: {
+    file: "HRET.glb",
+    name: "High Reach Extendable Turret",
+    tag: "EXTINGUISHING",
+    desc: "Snozzle HRET for piercing and elevated application.",
+    pno: "HR-004",
+    mat: "Reinforced Alloy",
+    flow: "1000 GPM",
+    serv: "FAA / ICAO",
+    vector: new THREE.Vector3(0, 2.0, 0)
   },
-  hose: { 
-    file: "Hose.glb", 
-    name: "Preconnected Hose Reel", 
-    tag: "DEPLOYMENT", 
-    desc: "Handline for manual suppression operations.", 
-    pno: "HS-005", 
-    mat: "Synthetic Rubber", 
-    flow: "125 GPM", 
-    serv: "NFPA 1961", 
-    vector: new THREE.Vector3(-1.5, 0, 0) 
+  hose: {
+    file: "Hose.glb",
+    name: "Preconnected Hose Reel",
+    tag: "DEPLOYMENT",
+    desc: "Handline for manual suppression operations.",
+    pno: "HS-005",
+    mat: "Synthetic Rubber",
+    flow: "125 GPM",
+    serv: "NFPA 1961",
+    vector: new THREE.Vector3(-1.5, 0, 0)
   }
 };
 
 const $ = id => document.getElementById(id);
-const container=$("webgl-container"), leaderCanvas=$("leader-canvas"), ctx=leaderCanvas.getContext("2d"), labelsContainer=$("labels-container");
-const errorPanel=$("error-panel"), errorMessage=$("error-message");
-
+const container = $("webgl-container");
+const leaderCanvas = $("leader-canvas");
+const ctx = leaderCanvas.getContext("2d");
+const labelsContainer = $("labels-container");
+const errorPanel = $("error-panel");
+const errorMessage = $("error-message");
 const hudPanel = $("hud-panel");
 const vrStatus = $("hud-vr-status");
+
 Object.keys(MODULE_METADATA).forEach(key => {
   const row = document.createElement("div");
   row.className = "status-row";
-  row.innerHTML = `<span class="status-name">${MODULE_METADATA[key].file.split('/').pop()}</span><span id="st-${key}" class="status-prog">WAITING</span>`;
+  row.innerHTML =
+    `<span class="status-name">${MODULE_METADATA[key].file}</span>` +
+    `<span id="st-${key}" class="status-prog">WAITING</span>`;
   hudPanel.insertBefore(row, vrStatus);
 });
 
 let narrationEnabled = false;
+let currentExplodeRatio = 0;
+let targetExplodeRatio = 0;
+let activeModuleId = null;
+let modelsNormalized = false;
+let vrCycleElapsed = 0;
+let vrCycleIndex = 0;
 
-function showError(message){errorPanel.style.display="block";errorMessage.textContent=message;}
-function hideError(){errorPanel.style.display="none";}
-function setStatus(id,text,cls="status-prog"){const el=$("st-"+id);if(el){el.textContent=text;el.className=cls;}}
+const vrCycleKeys = Object.keys(MODULE_METADATA);
+const vrClock = new THREE.Clock();
+const desktopAssemblyScale = new THREE.Vector3();
+const desktopAssemblyPosition = new THREE.Vector3();
+const loadedModules = new Map();
+const grabState = new Map();
+const handPinchStates = new Map();
+const loadProgress = {};
 
-function speak(text){
-  if (!narrationEnabled) return;
+function showError(message) {
+  errorPanel.style.display = "block";
+  errorMessage.textContent = message;
+}
+
+function hideError() {
+  errorPanel.style.display = "none";
+}
+
+function setStatus(id, text, cls = "status-prog") {
+  const el = $("st-" + id);
+  if (el) {
+    el.textContent = text;
+    el.className = cls;
+  }
+}
+
+function speak(text) {
+  if (!narrationEnabled || !("speechSynthesis" in window)) return;
+
   window.speechSynthesis.cancel();
-  const utterance=new SpeechSynthesisUtterance(text);
-  utterance.lang='en-GB';
-  utterance.rate=0.95;
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-GB";
+  utterance.rate = 0.95;
   window.speechSynthesis.speak(utterance);
 }
 
-const scene=new THREE.Scene();scene.background=null;scene.fog=new THREE.FogExp2(0x0f172a,.025);
-const camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,.01,100);
-camera.position.set(0,.1,1.0);
+const scene = new THREE.Scene();
+scene.background = null;
+scene.fog = new THREE.FogExp2(0x0f172a, 0.025);
 
-const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:"high-performance"});
-renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.setSize(innerWidth,innerHeight);
-renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
-renderer.setClearColor(0x000000,0);renderer.xr.enabled=true;renderer.xr.setReferenceSpaceType("local-floor");
+const camera = new THREE.PerspectiveCamera(
+  45, innerWidth / innerHeight, 0.01, 100
+);
+camera.position.set(0, 0.1, 1.0);
+
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  alpha: true,
+  powerPreference: "high-performance"
+});
+
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.setClearColor(0x000000, 0);
+renderer.xr.enabled = true;
+renderer.xr.setReferenceSpaceType("local-floor");
 container.appendChild(renderer.domElement);
 
-const xrStage=new THREE.Group();scene.add(xrStage);
-xrStage.add(new THREE.HemisphereLight(0xffffff,0x475569,2.0));
-const keyLight=new THREE.DirectionalLight(0xffffff,2.2);keyLight.position.set(3,6,5);xrStage.add(keyLight);
-const fillLight=new THREE.DirectionalLight(0x94a3b8,1.0);fillLight.position.set(-4,-2,-3);xrStage.add(fillLight);
-const rimLight=new THREE.DirectionalLight(0xf97316,.65);rimLight.position.set(0,5,-4);xrStage.add(rimLight);
-const grid=new THREE.GridHelper(8,16,0xf97316,0x334155);grid.position.y=-1.2;xrStage.add(grid);
-const assemblyGroup=new THREE.Group();xrStage.add(assemblyGroup);
+const xrStage = new THREE.Group();
+scene.add(xrStage);
 
-const panelCanvas = document.createElement('canvas');
+xrStage.add(new THREE.HemisphereLight(0xffffff, 0x475569, 2.0));
+
+const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
+keyLight.position.set(3, 6, 5);
+xrStage.add(keyLight);
+
+const fillLight = new THREE.DirectionalLight(0x94a3b8, 1.0);
+fillLight.position.set(-4, -2, -3);
+xrStage.add(fillLight);
+
+const rimLight = new THREE.DirectionalLight(0xf97316, 0.65);
+rimLight.position.set(0, 5, -4);
+xrStage.add(rimLight);
+
+const grid = new THREE.GridHelper(8, 16, 0xf97316, 0x334155);
+grid.position.y = -1.2;
+xrStage.add(grid);
+
+const assemblyGroup = new THREE.Group();
+xrStage.add(assemblyGroup);
+
+/* INFORMATION PANEL */
+
+const panelCanvas = document.createElement("canvas");
 panelCanvas.width = 1024;
 panelCanvas.height = 512;
-const panelCtx = panelCanvas.getContext('2d');
+
+const panelCtx = panelCanvas.getContext("2d");
 const panelTex = new THREE.CanvasTexture(panelCanvas);
 panelTex.colorSpace = THREE.SRGBColorSpace;
-const panelMat = new THREE.MeshBasicMaterial({ map: panelTex, transparent: true, opacity: 0.95, side: THREE.DoubleSide });
-const panelGeo = new THREE.PlaneGeometry(0.7, 0.35);
-const vrInfoPanel = new THREE.Mesh(panelGeo, panelMat);
+
+const panelMat = new THREE.MeshBasicMaterial({
+  map: panelTex,
+  transparent: true,
+  opacity: 0.95,
+  side: THREE.DoubleSide,
+  depthWrite: false
+});
+
+const vrInfoPanel = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.7, 0.35),
+  panelMat
+);
+
 vrInfoPanel.position.set(0, 1.27, -0.50);
 vrInfoPanel.visible = false;
 xrStage.add(vrInfoPanel);
 
 function wrapText(context, text, x, y, maxWidth, lineHeight) {
-  const words = text.split(' ');
-  let line = '';
-  for(let n = 0; n < words.length; n++) {
-    const testLine = line + words[n] + ' ';
-    const metrics = context.measureText(testLine);
-    if (metrics.width > maxWidth && n > 0) {
+  const words = text.split(" ");
+  let line = "";
+
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + " ";
+
+    if (context.measureText(testLine).width > maxWidth && n > 0) {
       context.fillText(line, x, y);
-      line = words[n] + ' ';
+      line = words[n] + " ";
       y += lineHeight;
     } else {
       line = testLine;
     }
   }
+
   context.fillText(line, x, y);
 }
 
 function updateVRPanel(title, pno, desc) {
   panelCtx.clearRect(0, 0, 1024, 512);
-  panelCtx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+
+  panelCtx.fillStyle = "rgba(15,23,42,0.95)";
   panelCtx.beginPath();
   panelCtx.roundRect(0, 0, 1024, 512, 24);
   panelCtx.fill();
-  panelCtx.strokeStyle = '#f97316';
+
+  panelCtx.strokeStyle = "#f97316";
   panelCtx.lineWidth = 6;
   panelCtx.stroke();
-  panelCtx.fillStyle = '#ffffff';
-  panelCtx.font = 'bold 52px monospace';
-  panelCtx.fillText(title, 48, 90);
-  panelCtx.fillStyle = '#f97316';
-  panelCtx.font = 'bold 36px monospace';
-  panelCtx.fillText('PN: ' + pno, 48, 150);
-  panelCtx.fillStyle = 'rgba(255,255,255,0.1)';
+
+  panelCtx.fillStyle = "#ffffff";
+  panelCtx.font = "bold 52px monospace";
+  panelCtx.fillText(title, 48, 90, 920);
+
+  panelCtx.fillStyle = "#f97316";
+  panelCtx.font = "bold 36px monospace";
+  panelCtx.fillText("PN: " + pno, 48, 150);
+
+  panelCtx.fillStyle = "rgba(255,255,255,0.1)";
   panelCtx.fillRect(48, 180, 928, 2);
-  panelCtx.fillStyle = '#94a3b8';
-  panelCtx.font = '36px sans-serif';
+
+  panelCtx.fillStyle = "#94a3b8";
+  panelCtx.font = "36px sans-serif";
   wrapText(panelCtx, desc, 48, 245, 928, 52);
+
   panelTex.needsUpdate = true;
-  if(renderer.xr.isPresenting) vrInfoPanel.visible = true;
+
+  if (renderer.xr.isPresenting) {
+    vrInfoPanel.visible = true;
+  }
 }
 
-const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.06;controls.minDistance=.2;controls.maxDistance=12;controls.target.set(0,0,0);
-const loadedModules=new Map();let currentExplodeRatio=0,targetExplodeRatio=0,activeModuleId=null,modelsNormalized=false;
-let vrCycleElapsed=0, vrCycleIndex=0;
-const vrCycleKeys=Object.keys(MODULE_METADATA);
-const vrClock=new THREE.Clock();
-const desktopAssemblyScale=new THREE.Vector3();
-const desktopAssemblyPosition=new THREE.Vector3();
-const grabState=new Map();
+/* CAMERA AND MODEL LOADING */
 
-const loader=new GLTFLoader();const dracoLoader=new DRACOLoader();
-dracoLoader.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/");
-loader.setDRACOLoader(dracoLoader);loader.setCrossOrigin("anonymous");
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.minDistance = 0.2;
+controls.maxDistance = 12;
+controls.target.set(0, 0, 0);
 
-const loadProgress = {};
+const loader = new GLTFLoader();
+const dracoLoader = new DRACOLoader();
+
+dracoLoader.setDecoderPath(
+  "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/"
+);
+
+loader.setDRACOLoader(dracoLoader);
+loader.setCrossOrigin("anonymous");
 
 function updateSplashProgress() {
   const keys = Object.keys(MODULE_METADATA);
   let totalPct = 0;
-  keys.forEach(k => { totalPct += (loadProgress[k] || 0); });
+
+  keys.forEach(k => {
+    totalPct += loadProgress[k] || 0;
+  });
+
   const aggregate = Math.round((totalPct / keys.length) * 100);
-  const splashProg = $("splash-progress");
-  if(splashProg) splashProg.textContent = `LOADING ASSETS: ${aggregate}%`;
-  if(loadedModules.size === keys.length) {
-    if(splashProg) splashProg.textContent = "SYSTEMS READY";
+  $("splash-progress").textContent = `LOADING ASSETS: ${aggregate}%`;
+
+  if (loadedModules.size === keys.length) {
+    $("splash-progress").textContent = "SYSTEMS READY";
     $("btn-web").disabled = false;
     $("btn-vr").disabled = false;
   }
 }
 
-function loadModel(key){
- const meta=MODULE_METADATA[key];setStatus(key,"LOADING");
- loader.load(meta.file,gltf=>{
-   const model=gltf.scene;
-   model.userData={id:key,...meta,initialPosition:model.position.clone(),initialQuaternion:model.quaternion.clone(),localCenter:new THREE.Vector3(),badgeEl:null,materials:[]};
-   model.traverse(child=>{
-     if(!child.isMesh)return;
-     child.frustumCulled=false;
-     const materials=Array.isArray(child.material)?child.material:[child.material];
-     materials.forEach((mat)=>{
-       if(mat.map)mat.map.colorSpace=THREE.SRGBColorSpace;
-       model.userData.materials.push(mat);
-       if(mat.emissive && !mat.userData.__originalEmissive){mat.userData.__originalEmissive=mat.emissive.clone();}
-     });
-   });
-   assemblyGroup.add(model);loadedModules.set(key,model);setStatus(key,"OK","status-ok");
-   loadProgress[key] = 1;
-   updateSplashProgress();
+function loadModel(key) {
+  const meta = MODULE_METADATA[key];
+  setStatus(key, "LOADING");
 
-   if(loadedModules.size===Object.keys(MODULE_METADATA).length){
-     normalizeScene();createBadges();
-     $("hud-panel").style.display="none";
-   }
- },xhr=>{
-   if(xhr.lengthComputable){
-     const pct = xhr.loaded / xhr.total;
-     loadProgress[key] = pct;
-     setStatus(key,Math.round(pct*100)+"%");
-     updateSplashProgress();
-   }
- },err=>{
-   setStatus(key,"ERROR","status-err");
-   const splashProg = $("splash-progress");
-   if(splashProg) splashProg.textContent = "ERROR LOADING " + key.toUpperCase();
-   showError("Could not load "+meta.file+".\nCheck that the file exists beside this HTML and that the site is hosted over HTTP/HTTPS.\n"+(err?.message||"See browser console for details."));
- });
+  loader.load(meta.file, gltf => {
+    const model = gltf.scene;
+
+    model.userData = {
+      id: key,
+      ...meta,
+      initialPosition: model.position.clone(),
+      initialQuaternion: model.quaternion.clone(),
+      localCenter: new THREE.Vector3(),
+      badgeEl: null,
+      materials: []
+    };
+
+    model.traverse(child => {
+      if (!child.isMesh) return;
+
+      child.frustumCulled = false;
+
+      const materials = Array.isArray(child.material)
+        ? child.material
+        : [child.material];
+
+      materials.forEach(mat => {
+        if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
+
+        model.userData.materials.push(mat);
+
+        if (mat.emissive && !mat.userData.__originalEmissive) {
+          mat.userData.__originalEmissive = mat.emissive.clone();
+        }
+      });
+    });
+
+    assemblyGroup.add(model);
+    loadedModules.set(key, model);
+
+    setStatus(key, "OK", "status-ok");
+    loadProgress[key] = 1;
+    updateSplashProgress();
+
+    if (loadedModules.size === Object.keys(MODULE_METADATA).length) {
+      normalizeScene();
+      createBadges();
+      $("hud-panel").style.display = "none";
+    }
+  }, xhr => {
+    if (xhr.lengthComputable) {
+      loadProgress[key] = xhr.loaded / xhr.total;
+      setStatus(key, Math.round(loadProgress[key] * 100) + "%");
+      updateSplashProgress();
+    }
+  }, err => {
+    setStatus(key, "ERROR", "status-err");
+    $("splash-progress").textContent = "ERROR LOADING " + key.toUpperCase();
+
+    showError(
+      "Could not load " + meta.file +
+      ".\nCheck the filename and host the page over HTTP/HTTPS.\n" +
+      (err?.message || "See browser console for details.")
+    );
+  });
 }
 
-function normalizeScene(){
- assemblyGroup.scale.setScalar(1);assemblyGroup.rotation.set(0,Math.PI/2,0);assemblyGroup.position.set(0,0,0);
- const box=new THREE.Box3().setFromObject(assemblyGroup);
- if(box.isEmpty())return;
- const size=box.getSize(new THREE.Vector3()),maxDim=Math.max(size.x,size.y,size.z);
- if(!Number.isFinite(maxDim)||maxDim<=0)return;
- 
- assemblyGroup.scale.setScalar(0.8125/maxDim);
- const scaledBox=new THREE.Box3().setFromObject(assemblyGroup),center=scaledBox.getCenter(new THREE.Vector3());
- assemblyGroup.position.sub(center);
- 
- desktopAssemblyScale.copy(assemblyGroup.scale);
- desktopAssemblyPosition.copy(assemblyGroup.position);
- 
- loadedModules.forEach(model=>{
+function normalizeScene() {
+  assemblyGroup.scale.setScalar(1);
+  assemblyGroup.rotation.set(0, Math.PI / 2, 0);
+  assemblyGroup.position.set(0, 0, 0);
+
+  const box = new THREE.Box3().setFromObject(assemblyGroup);
+  if (box.isEmpty()) return;
+
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+
+  if (!Number.isFinite(maxDim) || maxDim <= 0) return;
+
+  assemblyGroup.scale.setScalar(0.8125 / maxDim);
+
+  const scaledBox = new THREE.Box3().setFromObject(assemblyGroup);
+  const center = scaledBox.getCenter(new THREE.Vector3());
+
+  assemblyGroup.position.sub(center);
+
+  desktopAssemblyScale.copy(assemblyGroup.scale);
+  desktopAssemblyPosition.copy(assemblyGroup.position);
+
+  loadedModules.forEach(model => {
     model.userData.initialPosition.copy(model.position);
-    model.userData.initialQuaternion=model.quaternion.clone();
-    const b=new THREE.Box3().setFromObject(model);
+    model.userData.initialQuaternion.copy(model.quaternion);
+
+    const b = new THREE.Box3().setFromObject(model);
     model.userData.localCenter.copy(b.getCenter(new THREE.Vector3()));
     model.worldToLocal(model.userData.localCenter);
- });
- 
- camera.position.set(0,.1,1.0);controls.target.set(0,0,0);controls.update();modelsNormalized=true;
+  });
+
+  camera.position.set(0, 0.1, 1.0);
+  controls.target.set(0, 0, 0);
+  controls.update();
+
+  modelsNormalized = true;
 }
 
-function createBadges(){
- labelsContainer.innerHTML="";let i=1;
- loadedModules.forEach(model=>{
-   const badge=document.createElement("button");badge.type="button";badge.className="annotation-badge";
-   const title=document.createElement("div");title.className="badge-title";title.textContent=String(i).padStart(2,"0")+" "+model.userData.name;
-   const meta=document.createElement("div");meta.className="badge-meta";meta.textContent="PN: "+model.userData.pno;
-   badge.append(title,meta);i++;
-   badge.addEventListener("pointerdown",e=>{e.stopPropagation();selectModule(model);});
-   badge.addEventListener("pointerenter",()=>highlightModule(model,true));
-   badge.addEventListener("pointerleave",()=>{if(activeModuleId!==model.userData.id)highlightModule(model,false);});
-   labelsContainer.appendChild(badge);model.userData.badgeEl=badge;
- });
+function createBadges() {
+  labelsContainer.innerHTML = "";
+  let i = 1;
+
+  loadedModules.forEach(model => {
+    const badge = document.createElement("button");
+    badge.type = "button";
+    badge.className = "annotation-badge";
+
+    const title = document.createElement("div");
+    title.className = "badge-title";
+    title.textContent =
+      String(i).padStart(2, "0") + " " + model.userData.name;
+
+    const meta = document.createElement("div");
+    meta.className = "badge-meta";
+    meta.textContent = "PN: " + model.userData.pno;
+
+    badge.append(title, meta);
+    i++;
+
+    badge.addEventListener("pointerdown", e => {
+      e.stopPropagation();
+      selectModule(model);
+    });
+
+    badge.addEventListener("pointerenter", () => {
+      highlightModule(model, true);
+    });
+
+    badge.addEventListener("pointerleave", () => {
+      if (activeModuleId !== model.userData.id) {
+        highlightModule(model, false);
+      }
+    });
+
+    labelsContainer.appendChild(badge);
+    model.userData.badgeEl = badge;
+  });
 }
 
-function highlightModule(model,on){
- model.userData.materials.forEach(mat=>{
-   if(!mat.emissive)return;
-   if(on)mat.emissive.setHex(0x331c0a);
-   else if(mat.userData.__originalEmissive)mat.emissive.copy(mat.userData.__originalEmissive);
-   else mat.emissive.setHex(0);
- });
+function highlightModule(model, on) {
+  model.userData.materials.forEach(mat => {
+    if (!mat.emissive) return;
+
+    if (on) {
+      mat.emissive.setHex(0x331c0a);
+    } else if (mat.userData.__originalEmissive) {
+      mat.emissive.copy(mat.userData.__originalEmissive);
+    } else {
+      mat.emissive.setHex(0);
+    }
+  });
 }
 
-function clearSelection(){
- if(activeModuleId&&loadedModules.has(activeModuleId))highlightModule(loadedModules.get(activeModuleId),false);
- activeModuleId=null;
- vrInfoPanel.visible=false;
- document.querySelectorAll(".annotation-badge").forEach(b=>b.classList.remove("active"));
- window.speechSynthesis.cancel();
+function clearSelection() {
+  if (activeModuleId && loadedModules.has(activeModuleId)) {
+    highlightModule(loadedModules.get(activeModuleId), false);
+  }
+
+  activeModuleId = null;
+  vrInfoPanel.visible = false;
+
+  document.querySelectorAll(".annotation-badge").forEach(b => {
+    b.classList.remove("active");
+  });
+
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
 }
 
-function selectModule(model){
- if(activeModuleId&&loadedModules.has(activeModuleId))highlightModule(loadedModules.get(activeModuleId),false);
- activeModuleId=model.userData.id;highlightModule(model,true);
- 
- updateVRPanel(model.userData.name, model.userData.pno, model.userData.desc);
- 
- document.querySelectorAll(".annotation-badge").forEach(b=>b.classList.remove("active"));
- if(model.userData.badgeEl)model.userData.badgeEl.classList.add("active");
- 
- speak(`${model.userData.name}. ${model.userData.desc}`);
+function selectModule(model) {
+  if (activeModuleId && loadedModules.has(activeModuleId)) {
+    highlightModule(loadedModules.get(activeModuleId), false);
+  }
+
+  activeModuleId = model.userData.id;
+  highlightModule(model, true);
+
+  updateVRPanel(
+    model.userData.name,
+    model.userData.pno,
+    model.userData.desc
+  );
+
+  document.querySelectorAll(".annotation-badge").forEach(b => {
+    b.classList.remove("active");
+  });
+
+  if (model.userData.badgeEl) {
+    model.userData.badgeEl.classList.add("active");
+  }
+
+  speak(`${model.userData.name}. ${model.userData.desc}`);
 }
 
-const raycaster=new THREE.Raycaster(),mouse=new THREE.Vector2();
+/* DESKTOP MODEL SELECTION */
 
-renderer.domElement.addEventListener("pointerdown",e=>{
- if(renderer.xr.isPresenting)return;
- if(e.target.closest?.(".control-deck,.hud-panel,.annotation-badge"))return;
- mouse.x=e.clientX/innerWidth*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;
- raycaster.setFromCamera(mouse,camera);
- const models=[...loadedModules.values()];const hits=raycaster.intersectObjects(models,true);
- if(!hits.length){clearSelection();return;}
- let obj=hits[0].object;while(obj.parent&&!models.includes(obj))obj=obj.parent;
- if(models.includes(obj))selectModule(obj);else clearSelection();
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+renderer.domElement.addEventListener("pointerdown", e => {
+  if (renderer.xr.isPresenting) return;
+
+  if (e.target.closest?.(".control-deck,.hud-panel,.annotation-badge")) {
+    return;
+  }
+
+  mouse.x = e.clientX / innerWidth * 2 - 1;
+  mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+
+  const models = [...loadedModules.values()];
+  const hits = raycaster.intersectObjects(models, true);
+
+  if (!hits.length) {
+    clearSelection();
+    return;
+  }
+
+  let obj = hits[0].object;
+
+  while (obj.parent && !models.includes(obj)) {
+    obj = obj.parent;
+  }
+
+  if (models.includes(obj)) {
+    selectModule(obj);
+  } else {
+    clearSelection();
+  }
 });
 
-const controller1=renderer.xr.getController(0),controller2=renderer.xr.getController(1);
-const handFactory=new XRHandModelFactory();
-const hand1=renderer.xr.getHand(0),hand2=renderer.xr.getHand(1);
+/* XR HANDS AND CONTROLLERS */
 
-const hModel1 = handFactory.createHandModel(hand1,"mesh");
-const hModel2 = handFactory.createHandModel(hand2,"mesh");
+const controller1 = renderer.xr.getController(0);
+const controller2 = renderer.xr.getController(1);
+
+const handFactory = new XRHandModelFactory();
+const hand1 = renderer.xr.getHand(0);
+const hand2 = renderer.xr.getHand(1);
+
+const hModel1 = handFactory.createHandModel(hand1, "mesh");
+const hModel2 = handFactory.createHandModel(hand2, "mesh");
 
 function setHandStyle(model) {
   const applyStyle = () => {
     let styled = false;
+
     model.traverse(child => {
       if (child.isMesh && child.material) {
-        child.material.transparent = true;
-        child.material.opacity = 0.25;
-        child.material.depthWrite = false;
-        child.material.emissive = new THREE.Color(0xf97316);
-        child.material.emissiveIntensity = 0.15;
+        const materials = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
+
+        materials.forEach(material => {
+          material.transparent = true;
+          material.opacity = 0.25;
+          material.depthWrite = false;
+
+          if (material.emissive) {
+            material.emissive.setHex(0xf97316);
+            material.emissiveIntensity = 0.15;
+          }
+        });
+
         styled = true;
       }
     });
+
     if (!styled) setTimeout(applyStyle, 100);
   };
+
   applyStyle();
 }
 
@@ -414,20 +956,36 @@ setHandStyle(hModel2);
 
 hand1.add(hModel1);
 hand2.add(hModel2);
-scene.add(controller1,controller2,hand1,hand2);
+
+scene.add(controller1, controller2, hand1, hand2);
+
+/* FLOATING VR CONTROL PANEL */
 
 const vrControlPanelGroup = new THREE.Group();
 vrControlPanelGroup.visible = false;
 xrStage.add(vrControlPanelGroup);
 
-const ctrlCanvas = document.createElement('canvas');
+const ctrlCanvas = document.createElement("canvas");
 ctrlCanvas.width = 1024;
 ctrlCanvas.height = 400;
-const ctrlCtx = ctrlCanvas.getContext('2d');
+
+const ctrlCtx = ctrlCanvas.getContext("2d");
 const ctrlTex = new THREE.CanvasTexture(ctrlCanvas);
 ctrlTex.colorSpace = THREE.SRGBColorSpace;
-const ctrlMat = new THREE.MeshBasicMaterial({ map: ctrlTex, transparent: true, opacity: 0.96, side: THREE.DoubleSide });
-const ctrlMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.215), ctrlMat);
+
+const ctrlMat = new THREE.MeshBasicMaterial({
+  map: ctrlTex,
+  transparent: true,
+  opacity: 0.96,
+  side: THREE.DoubleSide,
+  depthWrite: false
+});
+
+const ctrlMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.55, 0.215),
+  ctrlMat
+);
+
 vrControlPanelGroup.add(ctrlMesh);
 
 const vrSliderTrackMinX = -0.19;
@@ -436,75 +994,197 @@ const vrSliderY = -0.01;
 
 const vrHandleMesh = new THREE.Mesh(
   new THREE.CylinderGeometry(0.018, 0.018, 0.018, 24),
-  new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.3, metalness: 0.2, emissive: 0xf97316, emissiveIntensity: 0.3 })
+  new THREE.MeshStandardMaterial({
+    color: 0xf97316,
+    roughness: 0.3,
+    metalness: 0.2,
+    emissive: 0xf97316,
+    emissiveIntensity: 0.3
+  })
 );
+
 vrHandleMesh.rotation.x = Math.PI / 2;
 vrHandleMesh.position.set(vrSliderTrackMinX, vrSliderY, 0.015);
 vrControlPanelGroup.add(vrHandleMesh);
 
-const vrCloseBtnMesh = new THREE.Mesh(
-  new THREE.BoxGeometry(0.065, 0.045, 0.02),
-  new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 })
-);
-vrCloseBtnMesh.position.set(0.20, 0.065, 0.01);
-vrControlPanelGroup.add(vrCloseBtnMesh);
+// No invisible EXIT hitbox is used.
+// Interaction is calculated against the visible canvas coordinates.
 
 function renderVRControlPanel() {
   ctrlCtx.clearRect(0, 0, 1024, 400);
 
-  ctrlCtx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+  ctrlCtx.fillStyle = "rgba(15,23,42,0.96)";
   ctrlCtx.beginPath();
   ctrlCtx.roundRect(0, 0, 1024, 400, 28);
   ctrlCtx.fill();
-  ctrlCtx.strokeStyle = '#334155';
+
+  ctrlCtx.strokeStyle = "#475569";
   ctrlCtx.lineWidth = 4;
   ctrlCtx.stroke();
 
-  ctrlCtx.fillStyle = '#f97316';
-  ctrlCtx.font = 'bold 34px monospace';
-  ctrlCtx.fillText('ASSEMBLY CONTROL', 50, 75);
+  ctrlCtx.fillStyle = "#f97316";
+  ctrlCtx.font = "bold 34px monospace";
+  ctrlCtx.fillText("ASSEMBLY CONTROL", 50, 75);
 
-  ctrlCtx.fillStyle = '#ef4444';
+  // Visible EXIT button.
+  ctrlCtx.fillStyle = "#ef4444";
   ctrlCtx.beginPath();
-  ctrlCtx.roundRect(870, 35, 105, 60, 10);
+  ctrlCtx.roundRect(850, 20, 140, 90, 12);
   ctrlCtx.fill();
-  ctrlCtx.fillStyle = '#ffffff';
-  ctrlCtx.font = 'bold 25px monospace';
-  ctrlCtx.fillText('EXIT', 892, 75);
 
-  ctrlCtx.fillStyle = '#94a3b8';
-  ctrlCtx.font = 'bold 28px monospace';
-  ctrlCtx.fillText('EXPLODE', 50, 205);
-
-  ctrlCtx.fillStyle = '#1e293b';
-  ctrlCtx.beginPath();
-  ctrlCtx.roundRect(240, 185, 560, 30, 15);
-  ctrlCtx.fill();
-  ctrlCtx.strokeStyle = '#475569';
+  ctrlCtx.strokeStyle = "#fecaca";
   ctrlCtx.lineWidth = 3;
   ctrlCtx.stroke();
 
-  const fillWidth = Math.max(15, 560 * Math.min(targetExplodeRatio / 2, 1));
-  ctrlCtx.fillStyle = '#f97316';
+  ctrlCtx.fillStyle = "#ffffff";
+  ctrlCtx.font = "bold 28px monospace";
+  ctrlCtx.fillText("EXIT", 883, 73);
+
+  ctrlCtx.fillStyle = "#94a3b8";
+  ctrlCtx.font = "bold 28px monospace";
+  ctrlCtx.fillText("EXPLODE", 50, 205);
+
+  // Visible slider track.
+  ctrlCtx.fillStyle = "#1e293b";
   ctrlCtx.beginPath();
-  ctrlCtx.roundRect(240, 185, fillWidth, 30, 15);
+  ctrlCtx.roundRect(240, 185, 560, 30, 15);
   ctrlCtx.fill();
 
-  ctrlCtx.fillStyle = '#f97316';
-  ctrlCtx.font = 'bold 36px monospace';
+  ctrlCtx.strokeStyle = "#475569";
+  ctrlCtx.lineWidth = 3;
+  ctrlCtx.stroke();
+
+  const fillWidth = 560 * Math.min(targetExplodeRatio / 2, 1);
+
+  if (fillWidth > 0) {
+    ctrlCtx.fillStyle = "#f97316";
+    ctrlCtx.beginPath();
+    ctrlCtx.roundRect(240, 185, fillWidth, 30, 15);
+    ctrlCtx.fill();
+  }
+
+  ctrlCtx.fillStyle = "#f97316";
+  ctrlCtx.font = "bold 36px monospace";
   ctrlCtx.fillText(`${Math.round(targetExplodeRatio * 100)}%`, 830, 210);
 
-  ctrlCtx.fillStyle = '#64748b';
-  ctrlCtx.font = '22px sans-serif';
-  ctrlCtx.fillText('0–200% EXPLODE · EXIT leaves VR', 50, 330);
+  ctrlCtx.fillStyle = "#94a3b8";
+  ctrlCtx.font = "22px sans-serif";
+  ctrlCtx.fillText("0–200% EXPLODE", 50, 330);
+  ctrlCtx.fillText("Pinch or trigger EXIT to leave VR", 50, 365);
 
   ctrlTex.needsUpdate = true;
 }
+
 renderVRControlPanel();
 
 function syncVRSliderVisuals(ratio) {
-  vrHandleMesh.position.x = vrSliderTrackMinX + (vrSliderTrackMaxX - vrSliderTrackMinX) * THREE.MathUtils.clamp(ratio / 2, 0, 1);
+  const normalized = THREE.MathUtils.clamp(ratio / 2, 0, 1);
+
+  vrHandleMesh.position.x =
+    vrSliderTrackMinX +
+    (vrSliderTrackMaxX - vrSliderTrackMinX) * normalized;
+
   renderVRControlPanel();
+}
+
+/*
+ * EXIT SESSION
+ *
+ * Ending the WebXR session returns the browser to the normal web view.
+ * Hiding the panel alone does not exit Passthrough.
+ */
+function exitVRSession() {
+  const session = renderer.xr.getSession();
+
+  if (!session) {
+    vrControlPanelGroup.visible = false;
+    return;
+  }
+
+  session.end().catch(err => {
+    console.error("Could not end XR session:", err);
+    showError(
+      "Could not exit Passthrough.\n" +
+      "Use the headset's system menu to leave the immersive session."
+    );
+  });
+}
+
+/*
+ * VISIBLE PANEL HIT-TESTING
+ *
+ * Converts a world-space point into the coordinates of the visible
+ * canvas texture. The canvas is 1024 x 400 and the panel is 0.55 x 0.215m.
+ */
+function getVRPanelCanvasPoint(worldPosition) {
+  if (!vrControlPanelGroup.visible) return null;
+
+  vrControlPanelGroup.updateMatrixWorld(true);
+
+  const local = vrControlPanelGroup.worldToLocal(
+    worldPosition.clone()
+  );
+
+  // Reject points too far in front of or behind the panel.
+  if (Math.abs(local.z) > 0.14) return null;
+
+  const panelWidth = 0.55;
+  const panelHeight = 0.215;
+
+  if (
+    Math.abs(local.x) > panelWidth / 2 ||
+    Math.abs(local.y) > panelHeight / 2
+  ) {
+    return null;
+  }
+
+  return {
+    x: (local.x / panelWidth + 0.5) * 1024,
+    y: (0.5 - local.y / panelHeight) * 400
+  };
+}
+
+/*
+ * Returns true when the point interacts with the EXIT button or slider.
+ * Controller triggers and hand pinches share this function.
+ */
+function interactWithVRPanel(worldPosition, source, isStart = true) {
+  if (!vrControlPanelGroup.visible) return false;
+
+  const point = getVRPanelCanvasPoint(worldPosition);
+  if (!point) return false;
+
+  const { x, y } = point;
+
+  // Visible EXIT rectangle: x=850..990, y=20..110.
+  if (
+    isStart &&
+    x >= 850 && x <= 990 &&
+    y >= 20 && y <= 110
+  ) {
+    exitVRSession();
+    return true;
+  }
+
+  // Visible slider track: x=240..800, y=185..215.
+  // Give it a slightly larger vertical interaction area.
+  if (
+    x >= 220 && x <= 820 &&
+    y >= 155 && y <= 245
+  ) {
+    if (isStart) {
+      grabState.set(source, { type: "vr-slider" });
+    }
+
+    const ratio = THREE.MathUtils.clamp(
+      (x - 240) / 560, 0, 1
+    ) * 2;
+
+    setExplode(ratio);
+    return true;
+  }
+
+  return false;
 }
 
 function positionVRControlPanelInFront() {
@@ -515,20 +1195,28 @@ function positionVRControlPanelInFront() {
   camera.getWorldDirection(cameraDir);
 
   cameraDir.y = 0;
-  if (cameraDir.lengthSq() < 0.001) cameraDir.set(0, 0, -1);
+
+  if (cameraDir.lengthSq() < 0.001) {
+    cameraDir.set(0, 0, -1);
+  }
+
   cameraDir.normalize();
 
-  const panelPos = cameraWorldPos.clone().addScaledVector(cameraDir, 1.20);
+  // Place panel 1.2m ahead, at chest height.
+  const panelPos = cameraWorldPos.clone().addScaledVector(cameraDir, 1.2);
   panelPos.y = Math.max(0.9, cameraWorldPos.y - 0.35);
 
   vrControlPanelGroup.position.copy(panelPos);
+
   vrControlPanelGroup.rotation.set(
     0,
     Math.atan2(-cameraDir.x, -cameraDir.z),
     0
   );
 
-  const cameraRight = new THREE.Vector3().crossVectors(cameraDir, new THREE.Vector3(0, 1, 0)).normalize();
+  const cameraRight = new THREE.Vector3()
+    .crossVectors(cameraDir, new THREE.Vector3(0, 1, 0))
+    .normalize();
 
   const infoPos = assemblyGroup.position.clone();
   infoPos.addScaledVector(cameraRight, 0.90);
@@ -542,330 +1230,621 @@ function positionVRControlPanelInFront() {
   vrControlPanelGroup.visible = true;
 }
 
-function getRootModule(obj){
-  const models=[...loadedModules.values()];
-  while(obj && !models.includes(obj)){
-    obj=obj.parent;
+/* XR MODEL GRABBING */
+
+function getRootModule(obj) {
+  const models = [...loadedModules.values()];
+
+  while (obj && !models.includes(obj)) {
+    obj = obj.parent;
   }
+
   return obj;
 }
 
-function findTargetObject(controller){
-  const models=[...loadedModules.values()];
-  const controllerPos=new THREE.Vector3().setFromMatrixPosition(controller.matrixWorld);
-  let closestObj=null;
-  let minDistance=0.45;
+function findTargetObject(controller) {
+  const models = [...loadedModules.values()];
 
-  for(const obj of models){
-    const objCenter=obj.localToWorld(obj.userData.localCenter.clone());
-    const dist=controllerPos.distanceTo(objCenter);
-    if(dist<minDistance){
-      minDistance=dist;
-      closestObj=obj;
+  const controllerPos = new THREE.Vector3()
+    .setFromMatrixPosition(controller.matrixWorld);
+
+  let closestObj = null;
+  let minDistance = 0.45;
+
+  for (const obj of models) {
+    const objCenter = obj.localToWorld(
+      obj.userData.localCenter.clone()
+    );
+
+    const dist = controllerPos.distanceTo(objCenter);
+
+    if (dist < minDistance) {
+      minDistance = dist;
+      closestObj = obj;
     }
   }
 
-  if(!closestObj){
-    const tempMatrix=new THREE.Matrix4().identity().extractRotation(controller.matrixWorld);
+  if (!closestObj) {
+    const tempMatrix = new THREE.Matrix4()
+      .identity()
+      .extractRotation(controller.matrixWorld);
+
     raycaster.ray.origin.copy(controllerPos);
-    raycaster.ray.direction.set(0,0,-1).applyMatrix4(tempMatrix);
-    const hits=raycaster.intersectObjects(models,true);
-    if(hits.length>0){
-      closestObj=getRootModule(hits[0].object);
+    raycaster.ray.direction
+      .set(0, 0, -1)
+      .applyMatrix4(tempMatrix);
+
+    const hits = raycaster.intersectObjects(models, true);
+
+    if (hits.length > 0) {
+      closestObj = getRootModule(hits[0].object);
     }
   }
+
   return closestObj;
 }
 
-function onSelectStart(event){
-  const controller=event.target;
-  const controllerPos=new THREE.Vector3().setFromMatrixPosition(controller.matrixWorld);
+function onSelectStart(event) {
+  const controller = event.target;
 
-  if(vrControlPanelGroup.visible){
-    const closeBtnPos=new THREE.Vector3().setFromMatrixPosition(vrCloseBtnMesh.matrixWorld);
-    if(controllerPos.distanceTo(closeBtnPos) < 0.075){
-      vrControlPanelGroup.visible = false;
-      return;
-    }
+  const controllerPos = new THREE.Vector3()
+    .setFromMatrixPosition(controller.matrixWorld);
 
-    const handlePos=new THREE.Vector3().setFromMatrixPosition(vrHandleMesh.matrixWorld);
-    if(controllerPos.distanceTo(handlePos) < 0.075){
-      grabState.set(controller, { type: "vr-slider" });
-      return;
-    }
+  // Interact with the visible panel before trying to grab a model.
+  if (interactWithVRPanel(controllerPos, controller, true)) {
+    return;
   }
 
-  const targetObj=findTargetObject(controller);
-  if(targetObj){
+  const targetObj = findTargetObject(controller);
+
+  if (targetObj) {
     controller.attach(targetObj);
     grabState.set(controller, targetObj);
     selectModule(targetObj);
-  }else{
+  } else {
     clearSelection();
   }
 }
 
-function onSelectEnd(event){
-  const controller=event.target;
-  const obj=grabState.get(controller);
-  if(obj){
-    if(obj.type !== "vr-slider"){
-      assemblyGroup.attach(obj);
-    }
-    grabState.delete(controller);
+function onSelectEnd(event) {
+  const controller = event.target;
+  const item = grabState.get(controller);
+
+  if (!item) return;
+
+  if (item.type !== "vr-slider") {
+    assemblyGroup.attach(item);
   }
+
+  grabState.delete(controller);
 }
 
-controller1.addEventListener("selectstart",onSelectStart);controller1.addEventListener("selectend",onSelectEnd);
-controller2.addEventListener("selectstart",onSelectStart);controller2.addEventListener("selectend",onSelectEnd);
+controller1.addEventListener("selectstart", onSelectStart);
+controller2.addEventListener("selectstart", onSelectStart);
+controller1.addEventListener("selectend", onSelectEnd);
+controller2.addEventListener("selectend", onSelectEnd);
 
-const handPinchStates=new Map();
-const tempVecA=new THREE.Vector3(),tempVecB=new THREE.Vector3(),tempVecC=new THREE.Vector3();
+/* HAND TRACKING AND TWO-HAND EXPLODE GESTURE */
 
-function isFingerExtended(hand,tipJoint,pipJoint,wristJoint){
-  if(!hand.joints||!hand.joints[tipJoint]||!hand.joints[pipJoint]||!hand.joints[wristJoint])return false;
+const tempVecA = new THREE.Vector3();
+const tempVecB = new THREE.Vector3();
+const tempVecC = new THREE.Vector3();
+
+function isFingerExtended(hand, tipJoint, pipJoint, wristJoint) {
+  if (
+    !hand.joints ||
+    !hand.joints[tipJoint] ||
+    !hand.joints[pipJoint] ||
+    !hand.joints[wristJoint]
+  ) {
+    return false;
+  }
+
   tempVecA.setFromMatrixPosition(hand.joints[tipJoint].matrixWorld);
   tempVecB.setFromMatrixPosition(hand.joints[pipJoint].matrixWorld);
   tempVecC.setFromMatrixPosition(hand.joints[wristJoint].matrixWorld);
-  return tempVecA.distanceTo(tempVecC) > tempVecB.distanceTo(tempVecC) + 0.025;
+
+  return tempVecA.distanceTo(tempVecC) >
+    tempVecB.distanceTo(tempVecC) + 0.025;
 }
 
-function isFingerCurled(hand,tipJoint,pipJoint,wristJoint){
-  if(!hand.joints||!hand.joints[tipJoint]||!hand.joints[pipJoint]||!hand.joints[wristJoint])return false;
+function isFingerCurled(hand, tipJoint, pipJoint, wristJoint) {
+  if (
+    !hand.joints ||
+    !hand.joints[tipJoint] ||
+    !hand.joints[pipJoint] ||
+    !hand.joints[wristJoint]
+  ) {
+    return false;
+  }
+
   tempVecA.setFromMatrixPosition(hand.joints[tipJoint].matrixWorld);
   tempVecB.setFromMatrixPosition(hand.joints[pipJoint].matrixWorld);
   tempVecC.setFromMatrixPosition(hand.joints[wristJoint].matrixWorld);
-  return tempVecA.distanceTo(tempVecC) <= tempVecB.distanceTo(tempVecC) + 0.01;
+
+  return tempVecA.distanceTo(tempVecC) <=
+    tempVecB.distanceTo(tempVecC) + 0.01;
 }
 
-function checkTwoFingerRaised(hand){
-  if(!hand.joints||!hand.joints["wrist"])return false;
-  const indexUp=isFingerExtended(hand,"index-finger-tip","index-finger-pip","wrist");
-  const middleUp=isFingerExtended(hand,"middle-finger-tip","middle-finger-pip","wrist");
-  const ringDown=isFingerCurled(hand,"ring-finger-tip","ring-finger-pip","wrist");
-  const pinkyDown=isFingerCurled(hand,"pinky-finger-tip","pinky-finger-pip","wrist");
+function checkTwoFingerRaised(hand) {
+  if (!hand.joints || !hand.joints["wrist"]) return false;
+
+  const indexUp = isFingerExtended(
+    hand, "index-finger-tip", "index-finger-pip", "wrist"
+  );
+
+  const middleUp = isFingerExtended(
+    hand, "middle-finger-tip", "middle-finger-pip", "wrist"
+  );
+
+  const ringDown = isFingerCurled(
+    hand, "ring-finger-tip", "ring-finger-pip", "wrist"
+  );
+
+  const pinkyDown = isFingerCurled(
+    hand, "pinky-finger-tip", "pinky-finger-pip", "wrist"
+  );
+
   return indexUp && middleUp && ringDown && pinkyDown;
 }
 
-let gestureActive=false;
-let gestureBaseHandDist=0.3;
-let gestureBaseExplode=0;
+let gestureActive = false;
+let gestureBaseHandDist = 0.3;
+let gestureBaseExplode = 0;
 
-function updateHandGestures(){
-  if(!renderer.xr.isPresenting)return;
+function updateHandGestures() {
+  if (!renderer.xr.isPresenting) return;
 
-  [hand1,hand2].forEach(hand=>{
-    if(!hand.joints||!hand.joints["index-finger-tip"]||!hand.joints["thumb-tip"])return;
-    const indexTip=tempVecA.setFromMatrixPosition(hand.joints["index-finger-tip"].matrixWorld);
-    const thumbTip=tempVecB.setFromMatrixPosition(hand.joints["thumb-tip"].matrixWorld);
-    const pinchDist=indexTip.distanceTo(thumbTip);
-    const wasPinched=handPinchStates.get(hand)||false;
-    const isPinched=pinchDist<0.025;
-    const pinchPoint=indexTip.clone().add(thumbTip).multiplyScalar(0.5);
+  [hand1, hand2].forEach(hand => {
+    if (
+      !hand.joints ||
+      !hand.joints["index-finger-tip"] ||
+      !hand.joints["thumb-tip"]
+    ) {
+      return;
+    }
 
-    if(!wasPinched && isPinched){
-      handPinchStates.set(hand,true);
+    const indexTip = tempVecA.setFromMatrixPosition(
+      hand.joints["index-finger-tip"].matrixWorld
+    );
 
-      if(vrControlPanelGroup.visible){
-        const closeBtnPos=new THREE.Vector3().setFromMatrixPosition(vrCloseBtnMesh.matrixWorld);
-        if(pinchPoint.distanceTo(closeBtnPos) < 0.06){
-          vrControlPanelGroup.visible = false;
-          return;
-        }
+    const thumbTip = tempVecB.setFromMatrixPosition(
+      hand.joints["thumb-tip"].matrixWorld
+    );
 
-        const handlePos=new THREE.Vector3().setFromMatrixPosition(vrHandleMesh.matrixWorld);
-        if(pinchPoint.distanceTo(handlePos) < 0.065){
-          grabState.set(hand, { type: "vr-slider" });
-          return;
+    const pinchDist = indexTip.distanceTo(thumbTip);
+    const wasPinched = handPinchStates.get(hand) || false;
+    const isPinched = pinchDist < 0.025;
+
+    const pinchPoint = indexTip.clone()
+      .add(thumbTip)
+      .multiplyScalar(0.5);
+
+    if (!wasPinched && isPinched) {
+      handPinchStates.set(hand, true);
+
+      // EXIT and slider interaction use the visible panel coordinates.
+      if (interactWithVRPanel(pinchPoint, hand, true)) {
+        return;
+      }
+
+      const models = [...loadedModules.values()];
+      let closestObj = null;
+      let minDistance = 0.35;
+
+      for (const obj of models) {
+        const center = obj.localToWorld(
+          obj.userData.localCenter.clone()
+        );
+
+        const d = pinchPoint.distanceTo(center);
+
+        if (d < minDistance) {
+          minDistance = d;
+          closestObj = obj;
         }
       }
 
-      const models=[...loadedModules.values()];
-      let closestObj=null;
-      let minDistance=0.35;
-      for(const obj of models){
-        const center=obj.localToWorld(obj.userData.localCenter.clone());
-        const d=pinchPoint.distanceTo(center);
-        if(d<minDistance){
-          minDistance=d;
-          closestObj=obj;
-        }
-      }
-      if(closestObj){
+      if (closestObj) {
         hand.attach(closestObj);
-        grabState.set(hand,closestObj);
+        grabState.set(hand, closestObj);
         selectModule(closestObj);
       }
-    }else if(wasPinched && !isPinched){
-      handPinchStates.set(hand,false);
-      const item=grabState.get(hand);
-      if(item){
-        if(item.type !== "vr-slider"){
+    } else if (wasPinched && !isPinched) {
+      handPinchStates.set(hand, false);
+
+      const item = grabState.get(hand);
+
+      if (item) {
+        if (item.type !== "vr-slider") {
           assemblyGroup.attach(item);
         }
+
         grabState.delete(hand);
       }
     }
   });
 
-  grabState.forEach((item, source)=>{
-    if(item && item.type === "vr-slider" && vrControlPanelGroup.visible){
-      let handPos = new THREE.Vector3();
-      if(source.joints && source.joints["index-finger-tip"] && source.joints["thumb-tip"]){
-        const iTip = tempVecA.setFromMatrixPosition(source.joints["index-finger-tip"].matrixWorld);
-        const tTip = tempVecB.setFromMatrixPosition(source.joints["thumb-tip"].matrixWorld);
-        handPos.addVectors(iTip, tTip).multiplyScalar(0.5);
-      } else {
-        handPos.setFromMatrixPosition(source.matrixWorld);
-      }
+  // Update the slider while a hand or controller is holding it.
+  grabState.forEach((item, source) => {
+    if (
+      !item ||
+      item.type !== "vr-slider" ||
+      !vrControlPanelGroup.visible
+    ) {
+      return;
+    }
 
-      const localHandPos = vrControlPanelGroup.worldToLocal(handPos);
-      const ratio = THREE.MathUtils.clamp((localHandPos.x - vrSliderTrackMinX) / (vrSliderTrackMaxX - vrSliderTrackMinX), 0, 1) * 2;
+    let handPos;
+
+    if (
+      source.joints &&
+      source.joints["index-finger-tip"] &&
+      source.joints["thumb-tip"]
+    ) {
+      const iTip = new THREE.Vector3().setFromMatrixPosition(
+        source.joints["index-finger-tip"].matrixWorld
+      );
+
+      const tTip = new THREE.Vector3().setFromMatrixPosition(
+        source.joints["thumb-tip"].matrixWorld
+      );
+
+      handPos = iTip.add(tTip).multiplyScalar(0.5);
+    } else {
+      handPos = new THREE.Vector3()
+        .setFromMatrixPosition(source.matrixWorld);
+    }
+
+    const point = getVRPanelCanvasPoint(handPos);
+
+    if (point) {
+      const ratio = THREE.MathUtils.clamp(
+        (point.x - 240) / 560, 0, 1
+      ) * 2;
+
       setExplode(ratio);
     }
   });
 
-  const h1Active=checkTwoFingerRaised(hand1);
-  const h2Active=checkTwoFingerRaised(hand2);
+  // Two-hand gesture: raise index and middle fingers on both hands,
+  // then move hands apart to explode and together to assemble.
+  const h1Active = checkTwoFingerRaised(hand1);
+  const h2Active = checkTwoFingerRaised(hand2);
 
-  if(h1Active && h2Active && hand1.joints["wrist"] && hand2.joints["wrist"]){
-    const w1=tempVecA.setFromMatrixPosition(hand1.joints["wrist"].matrixWorld);
-    const w2=tempVecB.setFromMatrixPosition(hand2.joints["wrist"].matrixWorld);
-    const dist=w1.distanceTo(w2);
+  if (
+    h1Active &&
+    h2Active &&
+    hand1.joints["wrist"] &&
+    hand2.joints["wrist"]
+  ) {
+    const w1 = tempVecA.setFromMatrixPosition(
+      hand1.joints["wrist"].matrixWorld
+    );
 
-    if(!gestureActive){
-      gestureActive=true;
-      gestureBaseHandDist=dist;
-      gestureBaseExplode=targetExplodeRatio;
-    }else{
-      const delta=dist - gestureBaseHandDist;
-      const nextRatio=THREE.MathUtils.clamp(gestureBaseExplode + delta * 3.5, 0, 2);
+    const w2 = tempVecB.setFromMatrixPosition(
+      hand2.joints["wrist"].matrixWorld
+    );
+
+    const dist = w1.distanceTo(w2);
+
+    if (!gestureActive) {
+      gestureActive = true;
+      gestureBaseHandDist = dist;
+      gestureBaseExplode = targetExplodeRatio;
+    } else {
+      const delta = dist - gestureBaseHandDist;
+      const nextRatio = THREE.MathUtils.clamp(
+        gestureBaseExplode + delta * 3.5, 0, 2
+      );
+
       setExplode(nextRatio);
     }
-  }else{
-    gestureActive=false;
+  } else {
+    gestureActive = false;
   }
 }
 
-function updateDesktopLabels(){
- if(renderer.xr.isPresenting){labelsContainer.style.display="none";ctx.clearRect(0,0,leaderCanvas.width,leaderCanvas.height);return;}
- labelsContainer.style.display="block";
- const w=innerWidth,h=innerHeight,dpr=Math.min(devicePixelRatio||1,2);
- if(leaderCanvas.width!==Math.round(w*dpr)||leaderCanvas.height!==Math.round(h*dpr)){leaderCanvas.width=Math.round(w*dpr);leaderCanvas.height=Math.round(h*dpr);leaderCanvas.style.width=w+"px";leaderCanvas.style.height=h+"px";}
- ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
- loadedModules.forEach(model=>{
-  const badge=model.userData.badgeEl;if(!badge)return;
-  const wp=model.localToWorld(model.userData.localCenter.clone()),p=wp.project(camera);
-  if(p.z>1||p.z< -1||Math.abs(p.x)>1.2||Math.abs(p.y)>1.2){badge.style.display="none";return;}
-  badge.style.display="block";const sx=(p.x*.5+.5)*w,sy=(-p.y*.5+.5)*h;
-  const right=sx<w/2;let bx=right?sx+55:sx-55-badge.offsetWidth,by=sy;
-  bx=Math.max(8,Math.min(w-badge.offsetWidth-8,bx));by=Math.max(75,Math.min(h-80,by));
-  badge.style.left=bx+"px";badge.style.top=by+"px";
-  const selected=model.userData.id===activeModuleId;ctx.beginPath();ctx.strokeStyle=selected?"#f97316":"rgba(249,115,22,.4)";ctx.lineWidth=selected?2:1;
-  ctx.moveTo(sx,sy);ctx.lineTo(right?sx+24:sx-24,sy);ctx.lineTo(right?bx:bx+badge.offsetWidth,by);ctx.stroke();
-  ctx.beginPath();ctx.fillStyle="#f97316";ctx.arc(sx,sy,selected?4:2.5,0,Math.PI*2);ctx.fill();
- });
+/* DESKTOP ANNOTATION LABELS */
+
+function updateDesktopLabels() {
+  if (renderer.xr.isPresenting) {
+    labelsContainer.style.display = "none";
+    ctx.clearRect(0, 0, leaderCanvas.width, leaderCanvas.height);
+    return;
+  }
+
+  labelsContainer.style.display = "block";
+
+  const w = innerWidth;
+  const h = innerHeight;
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+
+  if (
+    leaderCanvas.width !== Math.round(w * dpr) ||
+    leaderCanvas.height !== Math.round(h * dpr)
+  ) {
+    leaderCanvas.width = Math.round(w * dpr);
+    leaderCanvas.height = Math.round(h * dpr);
+    leaderCanvas.style.width = w + "px";
+    leaderCanvas.style.height = h + "px";
+  }
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  loadedModules.forEach(model => {
+    const badge = model.userData.badgeEl;
+    if (!badge) return;
+
+    const wp = model.localToWorld(
+      model.userData.localCenter.clone()
+    );
+
+    const p = wp.project(camera);
+
+    if (
+      p.z > 1 || p.z < -1 ||
+      Math.abs(p.x) > 1.2 ||
+      Math.abs(p.y) > 1.2
+    ) {
+      badge.style.display = "none";
+      return;
+    }
+
+    badge.style.display = "block";
+
+    const sx = (p.x * 0.5 + 0.5) * w;
+    const sy = (-p.y * 0.5 + 0.5) * h;
+
+    const right = sx < w / 2;
+
+    let bx = right
+      ? sx + 55
+      : sx - 55 - badge.offsetWidth;
+
+    let by = sy;
+
+    bx = Math.max(8, Math.min(w - badge.offsetWidth - 8, bx));
+    by = Math.max(75, Math.min(h - 80, by));
+
+    badge.style.left = bx + "px";
+    badge.style.top = by + "px";
+
+    const selected = model.userData.id === activeModuleId;
+
+    ctx.beginPath();
+    ctx.strokeStyle = selected
+      ? "#f97316"
+      : "rgba(249,115,22,.4)";
+    ctx.lineWidth = selected ? 2 : 1;
+
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(right ? sx + 24 : sx - 24, sy);
+    ctx.lineTo(right ? bx : bx + badge.offsetWidth, by);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.fillStyle = "#f97316";
+    ctx.arc(sx, sy, selected ? 4 : 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
 }
 
-$("explode-slider").addEventListener("input",e=>{setExplode(Number(e.target.value)/100);});
-function setExplode(value){
-  targetExplodeRatio=value;
-  $("explode-slider").value=Math.round(value*100);
-  $("pct-label").textContent=Math.round(value*100)+"%";
-  syncVRSliderVisuals(value);
+/* WEB CONTROLS */
+
+function setExplode(value) {
+  targetExplodeRatio = THREE.MathUtils.clamp(value, 0, 2);
+
+  $("explode-slider").value = Math.round(targetExplodeRatio * 100);
+  $("pct-label").textContent =
+    Math.round(targetExplodeRatio * 100) + "%";
+
+  syncVRSliderVisuals(targetExplodeRatio);
 }
-$("btn-assemble").addEventListener("click",()=>setExplode(0));$("btn-explode").addEventListener("click",()=>setExplode(2));
-$("btn-reset-cam").addEventListener("click",()=>{if(renderer.xr.isPresenting){showError("Reset view after exiting Passthrough. The headset controls the camera.");return;}camera.position.set(0,.1,1.0);controls.target.set(0,0,0);controls.update();});
+
+$("explode-slider").addEventListener("input", e => {
+  setExplode(Number(e.target.value) / 100);
+});
+
+$("btn-assemble").addEventListener("click", () => {
+  setExplode(0);
+});
+
+$("btn-explode").addEventListener("click", () => {
+  setExplode(2);
+});
+
+$("btn-reset-cam").addEventListener("click", () => {
+  if (renderer.xr.isPresenting) {
+    showError("The headset controls the camera while in Passthrough.");
+    return;
+  }
+
+  camera.position.set(0, 0.1, 1.0);
+  controls.target.set(0, 0, 0);
+  controls.update();
+});
 
 $("btn-narration").addEventListener("click", () => {
- narrationEnabled = !narrationEnabled;
- $("btn-narration").textContent = narrationEnabled ? "AUDIO: ON" : "AUDIO: OFF";
- $("btn-narration").classList.toggle("btn-accent", narrationEnabled);
- if (!narrationEnabled) window.speechSynthesis.cancel();
+  narrationEnabled = !narrationEnabled;
+
+  $("btn-narration").textContent =
+    narrationEnabled ? "AUDIO: ON" : "AUDIO: OFF";
+
+  $("btn-narration").classList.toggle(
+    "btn-accent", narrationEnabled
+  );
+
+  if (!narrationEnabled && "speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
 });
 
-function dismissSplash(){
-  const screen=$("start-screen");
-  const vid=$("bg-video");
-  window.speechSynthesis.cancel();
-  screen.style.opacity="0";
-  setTimeout(()=>{
-    screen.style.display="none";
-    if(vid)vid.pause();
-  },500);
+function dismissSplash() {
+  const screen = $("start-screen");
+  const vid = $("bg-video");
+
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+
+  screen.style.opacity = "0";
+
+  setTimeout(() => {
+    screen.style.display = "none";
+    if (vid) vid.pause();
+  }, 500);
 }
 
-$("btn-web").addEventListener("click",()=>{dismissSplash();});
-$("btn-vr").addEventListener("click",async()=>{
- try{
-  showError("Checking WebXR and model status...");
-  if(!navigator.xr)throw new Error("WebXR is unavailable. Open this page in Meta Quest Browser over HTTPS.");
-  const supported=await navigator.xr.isSessionSupported("immersive-ar");
-  if(!supported)throw new Error("Immersive AR (Passthrough) is not supported in this browser.");
-  if(loadedModules.size!==Object.keys(MODULE_METADATA).length){
-    const states=Object.keys(MODULE_METADATA).map(k=>k+".glb: "+(loadedModules.has(k)?"loaded":$("st-"+k).textContent)).join("\n");
-    throw new Error("Models are not fully loaded. Wait for all statuses to show OK.\n"+states);
-  }
-  setStatus("vr","STARTING");
-  
-  const session=await navigator.xr.requestSession("immersive-ar",{
-      optionalFeatures:["local-floor","hand-tracking","dom-overlay"],
-      domOverlay:{root:document.body}
-  });
-  
-  await renderer.xr.setSession(session);
-  hideError();dismissSplash();$("vr-hint").style.display="block";
-  session.addEventListener("end",()=>{$("vr-hint").style.display="none";});
- }catch(err){setStatus("vr","ERROR","status-err");showError("AR STARTUP FAILED\n"+(err?.stack||err?.message||String(err)));}
+$("btn-web").addEventListener("click", () => {
+  dismissSplash();
 });
 
-renderer.xr.addEventListener("sessionstart",()=>{
- scene.background=null;scene.fog=null;renderer.setClearColor(0x000000,0);
- xrStage.position.set(0,0,0);xrStage.rotation.set(0,0,0);
- $("control-deck").style.display="none";
- 
- assemblyGroup.scale.copy(desktopAssemblyScale).multiplyScalar(1.5);
- assemblyGroup.position.set(0, 0, -0.85);
- assemblyGroup.updateMatrixWorld(true);
- 
- const targetModel = loadedModules.get('striker') || loadedModules.values().next().value;
- if (targetModel) {
+$("btn-vr").addEventListener("click", async () => {
+  try {
+    hideError();
+    showError("Checking WebXR and model status...");
+
+    if (!navigator.xr) {
+      throw new Error(
+        "WebXR is unavailable. Open this page in Meta Quest Browser over HTTPS."
+      );
+    }
+
+    const supported = await navigator.xr.isSessionSupported("immersive-ar");
+
+    if (!supported) {
+      throw new Error(
+        "Immersive AR (Passthrough) is not supported by this browser."
+      );
+    }
+
+    if (loadedModules.size !== Object.keys(MODULE_METADATA).length) {
+      throw new Error(
+        "Models are not fully loaded. Wait for all model statuses to show OK."
+      );
+    }
+
+    setStatus("vr", "STARTING");
+
+    const session = await navigator.xr.requestSession("immersive-ar", {
+      optionalFeatures: [
+        "local-floor",
+        "hand-tracking",
+        "dom-overlay"
+      ],
+      domOverlay: { root: document.body }
+    });
+
+    await renderer.xr.setSession(session);
+
+    hideError();
+    dismissSplash();
+
+    $("vr-hint").style.display = "block";
+
+    session.addEventListener("end", () => {
+      $("vr-hint").style.display = "none";
+    });
+
+  } catch (err) {
+    setStatus("vr", "ERROR", "status-err");
+
+    showError(
+      "AR STARTUP FAILED\n" +
+      (err?.stack || err?.message || String(err))
+    );
+  }
+});
+
+/* XR SESSION START */
+
+renderer.xr.addEventListener("sessionstart", () => {
+  scene.background = null;
+  scene.fog = null;
+  renderer.setClearColor(0x000000, 0);
+
+  xrStage.position.set(0, 0, 0);
+  xrStage.rotation.set(0, 0, 0);
+
+  $("control-deck").style.display = "none";
+
+  assemblyGroup.scale.copy(desktopAssemblyScale).multiplyScalar(1.5);
+  assemblyGroup.position.set(0, 0, -0.85);
+
+  assemblyGroup.updateMatrixWorld(true);
+
+  const targetModel =
+    loadedModules.get("striker") ||
+    loadedModules.values().next().value;
+
+  if (targetModel) {
     const box = new THREE.Box3().setFromObject(targetModel);
     const center = box.getCenter(new THREE.Vector3());
-    const yOffset = 1.55 - center.y;
-    assemblyGroup.position.y += yOffset;
- } else {
+
+    assemblyGroup.position.y += 1.55 - center.y;
+  } else {
     const box = new THREE.Box3().setFromObject(assemblyGroup);
     const size = box.getSize(new THREE.Vector3());
-    assemblyGroup.position.y = 1.55 - (size.y / 2);
- }
- 
- grid.visible=false;setStatus("vr","PRESENTING","status-ok");
 
- positionVRControlPanelInFront();
- vrControlPanelGroup.visible = true;
- syncVRSliderVisuals(targetExplodeRatio);
+    assemblyGroup.position.y = 1.55 - size.y / 2;
+  }
+
+  grid.visible = false;
+
+  setStatus("vr", "PRESENTING", "status-ok");
+
+  vrCycleElapsed = 0;
+  vrCycleIndex = Math.max(0, vrCycleKeys.indexOf(activeModuleId));
+
+  positionVRControlPanelInFront();
+  vrControlPanelGroup.visible = true;
+
+  syncVRSliderVisuals(targetExplodeRatio);
 });
 
-renderer.xr.addEventListener("sessionend",()=>{
- scene.background=null;scene.fog=new THREE.FogExp2(0x0f172a,.025);renderer.setClearColor(0x000000,0);
- xrStage.position.set(0,0,0);xrStage.rotation.set(0,0,0);
- $("control-deck").style.display="flex";
- 
- if(modelsNormalized){
+/* XR SESSION END: RESTORE NORMAL WEB VIEW */
+
+renderer.xr.addEventListener("sessionend", () => {
+  scene.background = null;
+  scene.fog = new THREE.FogExp2(0x0f172a, 0.025);
+  renderer.setClearColor(0x000000, 0);
+
+  xrStage.position.set(0, 0, 0);
+  xrStage.rotation.set(0, 0, 0);
+
+  $("control-deck").style.display = "flex";
+  $("vr-hint").style.display = "none";
+
+  vrControlPanelGroup.visible = false;
+  vrInfoPanel.visible = false;
+
+  grabState.clear();
+  handPinchStates.clear();
+  gestureActive = false;
+
+  if (modelsNormalized) {
     assemblyGroup.scale.copy(desktopAssemblyScale);
     assemblyGroup.position.copy(desktopAssemblyPosition);
- }
- 
- grid.visible=true;camera.position.set(0,.1,1.0);controls.target.set(0,0,0);controls.update();
- vrInfoPanel.visible=false;
- vrControlPanelGroup.visible=false;
- setStatus("vr","READY");
+  }
+
+  grid.visible = true;
+
+  camera.position.set(0, 0.1, 1.0);
+  controls.target.set(0, 0, 0);
+  controls.update();
+
+  setStatus("vr", "READY", "status-ok");
 });
 
-function animate(){
+/* MAIN ANIMATION LOOP */
+
+function animate() {
   const delta = Math.min(vrClock.getDelta(), 0.05);
-  currentExplodeRatio+=(targetExplodeRatio-currentExplodeRatio)*.08;
+
+  currentExplodeRatio +=
+    (targetExplodeRatio - currentExplodeRatio) * 0.08;
 
   updateHandGestures();
 
@@ -873,35 +1852,54 @@ function animate(){
     assemblyGroup.rotation.y += delta * 0.12;
 
     vrCycleElapsed += delta;
+
     if (vrCycleElapsed >= 5) {
       vrCycleElapsed = 0;
+
       if (vrCycleKeys.length) {
         vrCycleIndex = (vrCycleIndex + 1) % vrCycleKeys.length;
+
         const nextModel = loadedModules.get(vrCycleKeys[vrCycleIndex]);
-        if (nextModel) selectModule(nextModel);
+
+        if (nextModel) {
+          selectModule(nextModel);
+        }
       }
     }
   }
 
-  loadedModules.forEach(model=>{
-    let isGrabbed=false;
-    grabState.forEach(v=>{if(v===model)isGrabbed=true;});
+  loadedModules.forEach(model => {
+    let isGrabbed = false;
 
-    if(!isGrabbed){
-      const targetPos=model.userData.initialPosition.clone().addScaledVector(model.userData.vector,currentExplodeRatio * 3.0);
-      model.position.lerp(targetPos,0.15);
-      model.quaternion.slerp(model.userData.initialQuaternion,0.15);
+    grabState.forEach(item => {
+      if (item === model) isGrabbed = true;
+    });
+
+    if (!isGrabbed) {
+      const targetPos = model.userData.initialPosition.clone()
+        .addScaledVector(model.userData.vector, currentExplodeRatio * 3.0);
+
+      model.position.lerp(targetPos, 0.15);
+      model.quaternion.slerp(model.userData.initialQuaternion, 0.15);
     }
   });
 
-  if(!renderer.xr.isPresenting)controls.update();
-  renderer.render(scene,camera);updateDesktopLabels();
+  if (!renderer.xr.isPresenting) {
+    controls.update();
+  }
+
+  renderer.render(scene, camera);
+  updateDesktopLabels();
 }
 
 renderer.setAnimationLoop(animate);
-window.addEventListener("resize",()=>{
-  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);
+
+window.addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
 });
+
 Object.keys(MODULE_METADATA).forEach(loadModel);
 </script>
 </body>
